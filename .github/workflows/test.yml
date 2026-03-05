@@ -23,8 +23,12 @@ jobs:
       - name: Make scripts executable
         run: |
           chmod +x scripts/orchestrate.sh
+          chmod +x scripts/sync-marketplace.sh
           chmod +x tests/**/*.sh
           find tests -name "*.sh" -type f -exec chmod +x {} \;
+
+      - name: Verify marketplace.json is up to date
+        run: ./scripts/sync-marketplace.sh --check
 
       - name: Run smoke tests
         run: make test-smoke

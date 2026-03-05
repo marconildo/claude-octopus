@@ -56,10 +56,15 @@ Show all open issues in table format:
 ```markdown
 ## Open Issues
 
-| ID | Severity | Description | Created | Phase |
-|----|----------|-------------|---------|-------|
-| ISS-20260203-001 | high | Auth not working | 2026-02-03 | Develop |
-| ISS-20260203-002 | medium | Slow query performance | 2026-02-03 | Deliver |
+| ID | Severity | Category | Description | Created | Phase |
+|----|----------|----------|-------------|---------|-------|
+| ISS-20260203-001 | high | integration | Auth not working | 2026-02-03 | Develop |
+| ISS-20260203-002 | medium | performance | Slow query performance | 2026-02-03 | Deliver |
+```
+
+**Pattern Detection:** After listing, check if 3+ open issues share the same category. If so, alert:
+```
+⚠ Pattern detected: 3 open issues in category "integration" — may indicate a systemic problem.
 ```
 
 **Implementation:**
@@ -80,21 +85,41 @@ Add new issue with auto-generated ID.
 
 #### Step 1: Gather Information
 
-```markdown
-**Adding new issue:** [description]
+Use AskUserQuestion with two questions:
 
-Please provide:
-1. **Severity** (critical/high/medium/low):
-2. **Additional context** (optional):
+```javascript
+AskUserQuestion({
+  questions: [
+    {
+      question: "What severity is this issue?",
+      header: "Severity",
+      multiSelect: false,
+      options: [
+        {label: "critical", description: "Blocks all progress"},
+        {label: "high", description: "Significant impact"},
+        {label: "medium", description: "Should address"},
+        {label: "low", description: "Nice to fix"}
+      ]
+    },
+    {
+      question: "What category does this issue fall into?",
+      header: "Category",
+      multiSelect: false,
+      options: [
+        {label: "logic-error", description: "Incorrect behavior or wrong output"},
+        {label: "integration", description: "Cross-component or API compatibility"},
+        {label: "quality-gate", description: "Quality gate failures during workflows"},
+        {label: "security", description: "Security vulnerabilities or concerns"},
+        {label: "performance", description: "Speed, memory, or scalability issues"},
+        {label: "ux", description: "User experience or usability problems"},
+        {label: "architecture", description: "Structural or design pattern issues"}
+      ]
+    }
+  ]
+})
 ```
 
-#### Step 2: Validate Severity
-
-Ensure severity is one of: `critical`, `high`, `medium`, `low`
-
-If invalid, ask again.
-
-#### Step 3: Determine Current Phase
+#### Step 2: Determine Current Phase
 
 ```bash
 # Check if STATE.md exists
@@ -120,22 +145,23 @@ grep "ISS-${TODAY}-" .octo/ISSUES.md | tail -1
 # If ISS-20260203-001 exists, next is ISS-20260203-002
 ```
 
-#### Step 5: Append to ISSUES.md
+#### Step 4: Append to ISSUES.md
 
 Add new row to Open Issues table:
 
 ```markdown
-| ISS-20260203-003 | medium | Slow query performance | 2026-02-03 | Develop |
+| ISS-20260203-003 | medium | performance | Slow query performance | 2026-02-03 | Develop |
 ```
 
 **Preserve existing issues** - append only, don't overwrite.
 
-#### Step 6: Confirm
+#### Step 5: Confirm
 
 ```markdown
 ✅ Issue created: ISS-20260203-003
 
 **Severity:** medium
+**Category:** performance
 **Description:** Slow query performance
 **Created:** 2026-02-03
 **Phase:** Develop
@@ -185,9 +211,9 @@ Please provide resolution notes:
 **Resolved Issues format:**
 
 ```markdown
-| ID | Severity | Description | Created | Resolved | Resolution |
-|----|----------|-------------|---------|----------|------------|
-| ISS-20260203-001 | high | Auth not working | 2026-02-03 | 2026-02-04 | Fixed OAuth token refresh |
+| ID | Severity | Category | Description | Created | Resolved | Resolution |
+|----|----------|----------|-------------|---------|----------|------------|
+| ISS-20260203-001 | high | integration | Auth not working | 2026-02-03 | 2026-02-04 | Fixed OAuth token refresh |
 ```
 
 #### Step 4: Confirm
@@ -224,6 +250,7 @@ Search both Open and Resolved sections for issue ID.
 
 **Status:** Open
 **Severity:** high
+**Category:** integration
 **Description:** Auth not working
 **Created:** 2026-02-03
 **Phase:** Develop
@@ -239,6 +266,7 @@ Search both Open and Resolved sections for issue ID.
 
 **Status:** Resolved
 **Severity:** high
+**Category:** integration
 **Description:** Auth not working
 **Created:** 2026-02-03
 **Resolved:** 2026-02-04

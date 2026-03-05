@@ -7,6 +7,16 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# Auto-sync marketplace.json with actual counts
+if [[ -x "$ROOT_DIR/scripts/sync-marketplace.sh" ]]; then
+    "$ROOT_DIR/scripts/sync-marketplace.sh"
+    # Stage any marketplace changes so they're included in the push
+    if ! git -C "$ROOT_DIR" diff --quiet .claude-plugin/marketplace.json 2>/dev/null; then
+        git -C "$ROOT_DIR" add .claude-plugin/marketplace.json
+        git -C "$ROOT_DIR" commit --quiet --amend --no-edit
+    fi
+fi
+
 # Run the full validation script if it exists
 if [[ -x "$ROOT_DIR/scripts/validate-release.sh" ]]; then
     "$ROOT_DIR/scripts/validate-release.sh"

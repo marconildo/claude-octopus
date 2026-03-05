@@ -3565,6 +3565,15 @@ ${related:+**Related:** ${related}}
 ---
 DECEOF
 
+    # v8.34.0: Companion JSONL for machine-queryable decisions (enables recurrence detection)
+    local jsonl_file="$decisions_dir/decisions.jsonl"
+    local safe_summary="${summary//\"/\\\"}"
+    local safe_rationale="${rationale//\"/\\\"}"
+    safe_rationale="${safe_rationale:-No rationale provided}"
+    local safe_scope="${scope//\"/\\\"}"
+    safe_scope="${safe_scope:-project-wide}"
+    echo "{\"id\":\"${decision_id}\",\"type\":\"${type}\",\"timestamp\":\"${timestamp}\",\"source\":\"${source}\",\"summary\":\"${safe_summary}\",\"scope\":\"${safe_scope}\",\"confidence\":\"${confidence}\",\"importance\":${importance}}" >> "$jsonl_file" 2>/dev/null || true
+
     log DEBUG "Recorded structured decision: $decision_id ($type from $source)"
 
     # Backward compat: also write to state.json via write_decision() if available
@@ -14140,6 +14149,91 @@ doctor_check_agents() {
     fi
 }
 
+# --- Category 11: Failure Recurrence (v8.34.0 — Idea Meritocracy E46/E47) ---
+# Parses .octo/decisions.jsonl for repeated failure patterns
+doctor_check_recurrence() {
+    local jsonl_file="${WORKSPACE_DIR}/.octo/decisions.jsonl"
+    if [[ ! -f "$jsonl_file" ]]; then
+        doctor_add "recurrence-data" "recurrence" "info" \
+            "No decision history yet — recurrence detection starts after first workflow" ""
+        return
+    fi
+
+    local total_decisions
+    total_decisions=$(wc -l < "$jsonl_file" 2>/dev/null | tr -d ' ')
+    if [[ "$total_decisions" -eq 0 ]]; then
+        doctor_add "recurrence-data" "recurrence" "info" \
+            "Decision log empty — no patterns to detect" ""
+        return
+    fi
+
+    doctor_add "recurrence-data" "recurrence" "pass" \
+        "${total_decisions} decisions logged" ""
+
+    # Count quality-gate failures (the most actionable pattern)
+    local qg_failures
+    qg_failures=$(grep -c '"type":"quality-gate"' "$jsonl_file" 2>/dev/null || echo "0")
+    if [[ "$qg_failures" -ge 3 ]]; then
+        doctor_add "recurrence-qg" "recurrence" "warn" \
+            "${qg_failures} quality gate failures recorded" \
+            "Recurring failures may indicate a systemic issue. Run /octo:issues to review."
+    elif [[ "$qg_failures" -gt 0 ]]; then
+        doctor_add "recurrence-qg" "recurrence" "info" \
+            "${qg_failures} quality gate failure(s) recorded" ""
+    fi
+
+    # Check for failures in the last 48 hours
+    local cutoff_epoch
+    if [[ "$OCTOPUS_PLATFORM" == "Darwin" ]]; then
+        cutoff_epoch=$(date -v-2d +%s 2>/dev/null || echo "0")
+    else
+        cutoff_epoch=$(date -d "2 days ago" +%s 2>/dev/null || echo "0")
+    fi
+
+    if [[ "$cutoff_epoch" -gt 0 ]]; then
+        local recent_failures=0
+        while IFS= read -r line; do
+            local ts
+            ts=$(echo "$line" | grep -o '"timestamp":"[^"]*"' | sed 's/"timestamp":"//;s/"//' || true)
+            if [[ -n "$ts" ]]; then
+                local line_epoch
+                if [[ "$OCTOPUS_PLATFORM" == "Darwin" ]]; then
+                    line_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ts" +%s 2>/dev/null || echo "0")
+                else
+                    line_epoch=$(date -d "$ts" +%s 2>/dev/null || echo "0")
+                fi
+                if [[ "$line_epoch" -ge "$cutoff_epoch" ]]; then
+                    ((recent_failures++))
+                fi
+            fi
+        done < <(grep '"type":"quality-gate"' "$jsonl_file" 2>/dev/null || true)
+
+        if [[ "$recent_failures" -ge 3 ]]; then
+            doctor_add "recurrence-recent" "recurrence" "warn" \
+                "${recent_failures} quality gate failures in last 48h — pattern detected" \
+                "Multiple recent failures suggest an active systemic issue"
+        elif [[ "$recent_failures" -gt 0 ]]; then
+            doctor_add "recurrence-recent" "recurrence" "pass" \
+                "${recent_failures} quality gate failure(s) in last 48h" ""
+        fi
+    fi
+
+    # Check source concentration (same source failing repeatedly)
+    local top_source
+    top_source=$(grep '"type":"quality-gate"' "$jsonl_file" 2>/dev/null | \
+        grep -o '"source":"[^"]*"' | sort | uniq -c | sort -rn | head -1 || true)
+    if [[ -n "$top_source" ]]; then
+        local count source_name
+        count=$(echo "$top_source" | awk '{print $1}')
+        source_name=$(echo "$top_source" | grep -o '"source":"[^"]*"' | sed 's/"source":"//;s/"//')
+        if [[ "$count" -ge 3 ]]; then
+            doctor_add "recurrence-source" "recurrence" "warn" \
+                "Recurring failure source: ${source_name} (${count}x)" \
+                "Same workflow failing repeatedly — investigate root cause"
+        fi
+    fi
+}
+
 # --- Output: Human-readable ---
 doctor_output_human() {
     local verbose="${1:-false}"
@@ -14249,7 +14343,7 @@ do_doctor() {
     DOCTOR_RESULTS_DETAIL=()
 
     # Run checks (filtered if category specified)
-    local categories=(providers auth config state smoke hooks scheduler skills conflicts agents)
+    local categories=(providers auth config state smoke hooks scheduler skills conflicts agents recurrence)
     for cat in "${categories[@]}"; do
         if [[ -z "$category_filter" || "$category_filter" == "$cat" ]]; then
             "doctor_check_${cat}"
