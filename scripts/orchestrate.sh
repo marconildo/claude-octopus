@@ -16599,6 +16599,252 @@ run_yaml_workflow() {
     echo "${all_outputs[-1]:-}"
 }
 
+# v8.54.0: Single-agent probe for multi-agentic skill dispatch
+# Runs one probe perspective synchronously and writes result to RESULTS_DIR.
+# Called by Claude's Agent tool (one per perspective) instead of probe_discover().
+# WHY: probe_discover() runs 5-7 agents + synthesis inside a single Bash subprocess
+# that frequently exceeds the 120s Bash tool timeout. By exposing each agent as a
+# standalone command, the skill layer can launch them via Agent(run_in_background=true)
+# with no timeout constraint, and Claude synthesizes in-conversation.
+probe_single_agent() {
+    local agent_type="$1"
+    local perspective="$2"
+    local task_id="$3"
+    local original_prompt="${4:-}"
+
+    log "INFO" "probe_single_agent: agent=$agent_type task=$task_id"
+    log "DEBUG" "probe_single_agent: perspective=${perspective:0:100}..."
+
+    # Pre-flight validation
+    preflight_check || return 1
+
+    mkdir -p "$RESULTS_DIR" "$LOGS_DIR"
+
+    # Determine role and phase
+    local role="researcher"
+    local phase="probe"
+
+    # Determine role if routing rules override
+    local routed_role
+    routed_role=$(match_routing_rule "$(classify_task "$perspective" 2>/dev/null)" "$perspective" 2>/dev/null) || true
+    if [[ -n "$routed_role" ]]; then
+        role="$routed_role"
+    fi
+
+    # v8.53.0: Pre-compute curated_name for readonly frontmatter check
+    local curated_name_early=""
+    if [[ "$SUPPORTS_AGENT_TYPE_ROUTING" == "true" ]]; then
+        curated_name_early=$(select_curated_agent "$perspective" "$phase") || true
+    fi
+
+    # Apply persona to prompt
+    local enhanced_prompt
+    enhanced_prompt=$(apply_persona "$role" "$perspective" "false" "${curated_name_early:-}")
+
+    # v8.21.0: Persona pack override
+    if type get_persona_override &>/dev/null 2>&1 && [[ "${OCTOPUS_PERSONA_PACKS:-auto}" != "off" ]]; then
+        local persona_override_file
+        persona_override_file=$(get_persona_override "${curated_name_early:-$agent_type}" 2>/dev/null)
+        if [[ -n "$persona_override_file" && -f "$persona_override_file" ]]; then
+            local pack_persona
+            pack_persona=$(cat "$persona_override_file" 2>/dev/null)
+            if [[ -n "$pack_persona" ]]; then
+                enhanced_prompt="${pack_persona}
+
+---
+
+${enhanced_prompt}"
+            fi
+        fi
+    fi
+
+    # v8.10.0: Enforce context budget AFTER all injections
+    enhanced_prompt=$(enforce_context_budget "$enhanced_prompt")
+
+    # Resolve model and command
+    local model
+    model=$(get_agent_model "$agent_type" "$phase" "$role")
+
+    local cmd
+    if ! cmd=$(get_agent_command "$agent_type" "$phase" "$role"); then
+        log ERROR "Unknown agent type: $agent_type"
+        return 1
+    fi
+
+    if ! validate_agent_command "$cmd"; then
+        log ERROR "Invalid agent command: $cmd"
+        return 1
+    fi
+
+    # Record agent call
+    record_agent_call "$agent_type" "$model" "$enhanced_prompt" "$phase" "$role" "0"
+
+    # Track provider usage
+    local provider_name
+    case "$agent_type" in
+        codex*) provider_name="codex" ;;
+        gemini*) provider_name="gemini" ;;
+        claude*) provider_name="claude" ;;
+        perplexity*) provider_name="perplexity" ;;
+        *) provider_name="$agent_type" ;;
+    esac
+    update_metrics "provider" "$provider_name" 2>/dev/null || true
+
+    # Register in bridge ledger
+    bridge_register_task "$task_id" "$agent_type" "$phase" "$role" || true
+
+    local result_file="${RESULTS_DIR}/${agent_type}-${task_id}.md"
+
+    # Build command array with credential isolation
+    local -a cmd_array
+    local env_prefix
+    env_prefix=$(build_provider_env "$agent_type")
+    if [[ -n "$env_prefix" ]]; then
+        read -ra cmd_array <<< "$env_prefix $cmd"
+    else
+        read -ra cmd_array <<< "$cmd"
+    fi
+
+    local temp_output="${RESULTS_DIR}/.tmp-${task_id}.out"
+    local temp_errors="${RESULTS_DIR}/.tmp-${task_id}.err"
+    local raw_output="${RESULTS_DIR}/.raw-${task_id}.out"
+
+    # Write result file header
+    echo "# Agent: $agent_type" > "$result_file"
+    echo "# Task ID: $task_id" >> "$result_file"
+    echo "# Role: $role" >> "$result_file"
+    echo "# Phase: $phase" >> "$result_file"
+    echo "# Prompt: ${perspective:0:200}" >> "$result_file"
+    echo "# Started: $(date)" >> "$result_file"
+    echo "" >> "$result_file"
+    echo "## Output" >> "$result_file"
+    echo '```' >> "$result_file"
+
+    # Append gemini headless flag
+    if [[ "$agent_type" == gemini* ]]; then
+        cmd_array+=(-p "")
+    fi
+
+    # Auth-aware retry loop (same logic as spawn_agent legacy path)
+    local max_auth_retries=0
+    if [[ "$OCTOPUS_BACKEND" != "api" ]]; then
+        max_auth_retries="${OCTOPUS_AUTH_RETRIES:-2}"
+    fi
+    if [[ "$SUPPORTS_STABLE_AUTH" == "true" ]]; then
+        max_auth_retries=$((max_auth_retries > 1 ? 1 : max_auth_retries))
+    fi
+
+    local auth_attempt=0
+    local exit_code=0
+    local start_time_ms
+    start_time_ms=$(( $(date +%s) * 1000 ))
+
+    while true; do
+        exit_code=0
+        if [[ "$agent_type" == gemini* ]]; then
+            if printf '%s' "$enhanced_prompt" | run_with_timeout "$TIMEOUT" "${cmd_array[@]}" 2> "$temp_errors" | tee "$raw_output" > "$temp_output"; then
+                exit_code=0
+            else
+                exit_code=$?
+            fi
+        else
+            if run_with_timeout "$TIMEOUT" "${cmd_array[@]}" "$enhanced_prompt" 2> "$temp_errors" | tee "$raw_output" > "$temp_output"; then
+                exit_code=0
+            else
+                exit_code=$?
+            fi
+        fi
+
+        if [[ $exit_code -ne 0 ]] && [[ $auth_attempt -lt $max_auth_retries ]]; then
+            local stderr_content=""
+            [[ -s "$temp_errors" ]] && stderr_content=$(cat "$temp_errors")
+            if [[ "$stderr_content" == *"unauthorized"* ]] || \
+               [[ "$stderr_content" == *"401"* ]] || \
+               [[ "$stderr_content" == *"auth"* ]] || \
+               [[ "$stderr_content" == *"credential"* ]] || \
+               [[ "$stderr_content" == *"token expired"* ]] || \
+               [[ "$stderr_content" == *"refresh"* ]]; then
+                ((auth_attempt++)) || true
+                local backoff=$((auth_attempt * 5))
+                log "WARN" "Auth failure (attempt $auth_attempt/$max_auth_retries), retrying in ${backoff}s..."
+                sleep "$backoff"
+                > "$temp_output"; > "$temp_errors"; > "$raw_output"
+                continue
+            fi
+        fi
+        break
+    done
+
+    # Process output
+    if [[ $exit_code -eq 0 ]]; then
+        awk '
+            BEGIN { in_response = 0; header_done = 0; }
+            /^--------$/ { header_done = 1; next; }
+            !header_done { next; }
+            /^(codex|gemini|assistant)$/ { in_response = 1; next; }
+            /^thinking$/ { next; }
+            /^tokens used$/ { next; }
+            /^[0-9,]+$/ && in_response { next; }
+            in_response { print; }
+        ' "$temp_output" >> "$result_file"
+
+        # Trust marker for external CLI output
+        case "$agent_type" in codex*|gemini*|perplexity*)
+            if [[ "${OCTOPUS_SECURITY_V870:-true}" == "true" ]]; then
+                sed -i.bak '1s/^/<!-- trust=untrusted provider='"$agent_type"' -->\n/' "$result_file" 2>/dev/null || true
+                rm -f "${result_file}.bak"
+            fi ;; esac
+
+        echo '```' >> "$result_file"
+        echo "" >> "$result_file"
+        echo "## Status: SUCCESS" >> "$result_file"
+
+        local end_time_ms elapsed_ms
+        end_time_ms=$(( $(date +%s) * 1000 ))
+        elapsed_ms=$((end_time_ms - start_time_ms))
+        update_agent_status "$agent_type" "completed" "$elapsed_ms" 0.0
+        record_outcome "$agent_type" "$agent_type" "research" "$phase" "success" "$elapsed_ms" 2>/dev/null || true
+    elif [[ $exit_code -eq 124 ]] || [[ $exit_code -eq 143 ]]; then
+        # Timeout — preserve partial output
+        if [[ -s "$temp_output" ]]; then
+            awk '
+                BEGIN { in_response = 0; header_done = 0; }
+                /^--------$/ { header_done = 1; next; }
+                !header_done { next; }
+                /^(codex|gemini|assistant)$/ { in_response = 1; next; }
+                in_response { print; }
+            ' "$temp_output" >> "$result_file"
+        fi
+        echo '```' >> "$result_file"
+        echo "" >> "$result_file"
+        echo "## Status: TIMEOUT" >> "$result_file"
+        log "WARN" "Agent $agent_type timed out for task $task_id"
+    else
+        # Failure
+        if [[ -s "$temp_output" ]]; then
+            cat "$temp_output" >> "$result_file"
+        fi
+        echo '```' >> "$result_file"
+        echo "" >> "$result_file"
+        echo "## Status: FAILED (exit code: $exit_code)" >> "$result_file"
+        if [[ -s "$temp_errors" ]]; then
+            echo "" >> "$result_file"
+            echo "## Errors" >> "$result_file"
+            echo '```' >> "$result_file"
+            cat "$temp_errors" >> "$result_file"
+            echo '```' >> "$result_file"
+        fi
+        log "WARN" "Agent $agent_type failed for task $task_id (exit=$exit_code)"
+    fi
+
+    # Cleanup temp files
+    rm -f "$temp_output" "$temp_errors" "$raw_output"
+
+    log "INFO" "probe_single_agent complete: $result_file"
+    # Output the result file path for the caller
+    echo "$result_file"
+}
+
 # Phase 1: PROBE (Discover) - Parallel research with synthesis
 # Like an octopus probing with multiple tentacles simultaneously
 probe_discover() {
@@ -21159,6 +21405,15 @@ case "$COMMAND" in
             exit 1
         fi
         probe_discover "$*"
+        ;;
+    probe-single)
+        # v8.54.0: Single-agent probe for multi-agentic skill dispatch
+        # Called by Claude's Agent tool (one per perspective) instead of monolithic probe
+        if [[ $# -lt 3 ]]; then
+            echo "Usage: $(basename "$0") probe-single <agent_type> <perspective> <task_id> [original_prompt]"
+            exit 1
+        fi
+        probe_single_agent "$1" "$2" "$3" "${4:-}"
         ;;
     define|grasp)
         # Phase 2: Define - Consensus building

@@ -150,12 +150,12 @@ done
 echo ""
 echo "Test 8: Checking discover.md specific questions..."
 discover_path="$COMMANDS_DIR/discover.md"
-if grep -q "depth" "$discover_path" && \
+if (grep -qi "depth\|intensity" "$discover_path") && \
    grep -q "focus" "$discover_path" && \
    (grep -q "output" "$discover_path" || grep -q "format" "$discover_path"); then
-    pass "discover.md has appropriate question topics (depth, focus, output)"
+    pass "discover.md has appropriate question topics (intensity/depth, focus, output)"
 else
-    fail "discover.md missing expected question topics" "Should ask about depth, focus, and output format"
+    fail "discover.md missing expected question topics" "Should ask about intensity/depth, focus, and output format"
 fi
 
 # Test 9: Verify review.md has specific questions

@@ -201,9 +201,15 @@ for skill_file in "${ENFORCE_SKILLS[@]}"; do
     if grep -q "\${CLAUDE_PLUGIN_ROOT}/scripts/orchestrate.sh" "$skill_file" && \
        grep -q "You MUST execute this command via the Bash tool" "$skill_file"; then
         ((skills_with_bash_call++))
+    elif [[ "$(basename "$skill_file")" == "flow-discover.md" ]] && \
+         grep -q "\${CLAUDE_PLUGIN_ROOT}/scripts/orchestrate.sh" "$skill_file" && \
+         grep -q "You MUST use the Agent tool" "$skill_file"; then
+        # v8.54.0: flow-discover uses Agent tool for parallel probe-single dispatch
+        # instead of a single Bash(orchestrate.sh probe) call
+        ((skills_with_bash_call++))
     else
-        fail "$(basename "$skill_file") missing explicit Bash tool requirement" \
-             "Should require 'You MUST execute this command via the Bash tool'"
+        fail "$(basename "$skill_file") missing explicit tool requirement" \
+             "Should require Bash tool (or Agent tool for flow-discover) for orchestrate.sh"
     fi
 done
 if [[ $skills_with_bash_call -eq ${#ENFORCE_SKILLS[@]} ]]; then
@@ -235,9 +241,16 @@ for skill_file in "${ENFORCE_SKILLS[@]}"; do
     if grep -q "find.*results.*-name.*synthesis.*-mmin" "$skill_file" || \
        grep -q "find.*results.*-name.*validation.*-mmin" "$skill_file"; then
         ((skills_with_file_check++))
+    elif [[ "$(basename "$skill_file")" == "flow-discover.md" ]] && \
+         grep -q 'probe-synthesis-' "$skill_file" && \
+         grep -q 'VALIDATION FAILED\|VALIDATION PASSED' "$skill_file"; then
+        # v8.54.0: flow-discover uses Agent-based execution where Claude writes
+        # the synthesis file directly and holds the path — no find -mmin needed.
+        # Still requires VALIDATION FAILED/PASSED gate check.
+        ((skills_with_file_check++))
     else
         fail "$(basename "$skill_file") missing synthesis file check" \
-             "Should use 'find' with -mmin to verify recent synthesis files"
+             "Should verify synthesis files exist (find -mmin or direct file check)"
     fi
 done
 if [[ $skills_with_file_check -eq ${#ENFORCE_SKILLS[@]} ]]; then
