@@ -15,10 +15,40 @@ description: Deep research with multi-source synthesis and comprehensive analysi
 
 When the user invokes this command (e.g., `/octo:research <arguments>`):
 
-**✓ CORRECT - Use the Skill tool:**
+### Step 1: Ask Research Intensity
+
+**CRITICAL: Before starting research, use the AskUserQuestion tool to select intensity:**
+
+```javascript
+AskUserQuestion({
+  questions: [
+    {
+      question: "How thorough should the research be?",
+      header: "Research Intensity",
+      multiSelect: false,
+      options: [
+        {label: "Quick (1-2 min)", description: "2 agents — fast problem space scan"},
+        {label: "Standard (2-4 min)", description: "4-5 agents — balanced multi-perspective coverage (recommended)"},
+        {label: "Deep (3-6 min)", description: "6-7 agents — exhaustive analysis with web search"}
+      ]
+    }
+  ]
+})
 ```
-Skill(skill: "octo:discover", args: "<user's arguments>")
+
+Map the answer to an intensity value:
+- "Quick" → `quick`
+- "Standard" → `standard`
+- "Deep" → `deep`
+
+### Step 2: Invoke Skill with Intensity
+
+**✓ CORRECT - Use the Skill tool with intensity prefix:**
 ```
+Skill(skill: "octo:discover", args: "[intensity=quick|standard|deep] <user's arguments>")
+```
+
+Example: `Skill(skill: "octo:discover", args: "[intensity=standard] OAuth 2.0 authentication patterns")`
 
 **✗ INCORRECT - Do NOT use Task tool:**
 ```

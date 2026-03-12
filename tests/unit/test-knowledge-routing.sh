@@ -185,7 +185,8 @@ test_status_shows_mode() {
     local output=$("$PROJECT_ROOT/scripts/orchestrate.sh" status 2>&1)
 
     # Status output shows "Mode:" line with one of: Development, Knowledge, Auto-Detect
-    if echo "$output" | grep -qi "Mode:.*Development\|Mode:.*Knowledge\|Mode:.*Auto-Detect"; then
+    # Use grep -c instead of grep -q to avoid SIGPIPE with set -eo pipefail
+    if echo "$output" | grep -ci "Mode:.*Development\|Mode:.*Knowledge\|Mode:.*Auto-Detect" >/dev/null; then
         test_pass
     else
         test_fail "Status should show current mode"
