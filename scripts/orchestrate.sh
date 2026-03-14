@@ -518,6 +518,12 @@ SUPPORTS_SESSION_END_TIMEOUT=false     # v8.56: Claude Code v2.1.74+ (CLAUDE_COD
 SUPPORTS_CONTEXT_SUGGESTIONS=false     # v8.56: Claude Code v2.1.74+ (/context command shows actionable optimization tips)
 SUPPORTS_PLUGIN_DIR_OVERRIDE=false     # v8.56: Claude Code v2.1.74+ (--plugin-dir local dev copies override installed marketplace plugins)
 SUPPORTS_MANAGED_POLICY_FIX=false      # v8.56: Claude Code v2.1.74+ (managed policy ask rules no longer bypassed by user allow/skill allowed-tools)
+SUPPORTS_MCP_ELICITATION=false        # v8.57: Claude Code v2.1.76+ (MCP servers can request structured user input mid-task via interactive dialog)
+SUPPORTS_ELICITATION_HOOKS=false      # v8.57: Claude Code v2.1.76+ (Elicitation and ElicitationResult hook events for intercepting MCP elicitation)
+SUPPORTS_WORKTREE_SPARSE_PATHS=false  # v8.57: Claude Code v2.1.76+ (worktree.sparsePaths setting for sparse checkout in --worktree mode)
+SUPPORTS_POST_COMPACT_HOOK=false      # v8.57: Claude Code v2.1.76+ (PostCompact hook event fires after context compaction completes)
+SUPPORTS_EFFORT_COMMAND=false         # v8.57: Claude Code v2.1.76+ (/effort slash command to set model effort level during session)
+SUPPORTS_BG_PARTIAL_RESULTS=false     # v8.57: Claude Code v2.1.76+ (killing background agent preserves partial results in conversation context)
 SUPPORTS_CONTINUATION=false           # v8.30: Agent resume/continuation for iterative retries
 OCTOPUS_BACKEND="api"              # v8.16: Detected backend (api|bedrock|vertex|foundry)
 AGENT_TEAMS_ENABLED="${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-0}"
@@ -792,6 +798,15 @@ detect_claude_code_version() {
         SUPPORTS_MANAGED_POLICY_FIX=true
     fi
 
+    if version_compare "$CLAUDE_CODE_VERSION" "2.1.76" ">="; then
+        SUPPORTS_MCP_ELICITATION=true
+        SUPPORTS_ELICITATION_HOOKS=true
+        SUPPORTS_WORKTREE_SPARSE_PATHS=true
+        SUPPORTS_POST_COMPACT_HOOK=true
+        SUPPORTS_EFFORT_COMMAND=true
+        SUPPORTS_BG_PARTIAL_RESULTS=true
+    fi
+
     log "INFO" "Claude Code v$CLAUDE_CODE_VERSION detected"
     log "INFO" "Task Management: $SUPPORTS_TASK_MANAGEMENT | Fork Context: $SUPPORTS_FORK_CONTEXT | Agent Teams: $SUPPORTS_AGENT_TEAMS"
     log "INFO" "Persistent Memory: $SUPPORTS_PERSISTENT_MEMORY | Hook Events: $SUPPORTS_HOOK_EVENTS | Agent Type Routing: $SUPPORTS_AGENT_TYPE_ROUTING"
@@ -820,6 +835,8 @@ detect_claude_code_version() {
     log "INFO" "Parallel Tool Resilience: $SUPPORTS_PARALLEL_TOOL_RESILIENCE | Plan With Args: $SUPPORTS_PLAN_WITH_ARGS"
     log "INFO" "Auto Memory Dir: $SUPPORTS_AUTO_MEMORY_DIR | Full Model IDs: $SUPPORTS_FULL_MODEL_IDS | Session End Timeout: $SUPPORTS_SESSION_END_TIMEOUT"
     log "INFO" "Context Suggestions: $SUPPORTS_CONTEXT_SUGGESTIONS | Plugin Dir Override: $SUPPORTS_PLUGIN_DIR_OVERRIDE | Managed Policy Fix: $SUPPORTS_MANAGED_POLICY_FIX"
+    log "INFO" "MCP Elicitation: $SUPPORTS_MCP_ELICITATION | Elicitation Hooks: $SUPPORTS_ELICITATION_HOOKS | Worktree Sparse Paths: $SUPPORTS_WORKTREE_SPARSE_PATHS"
+    log "INFO" "Post Compact Hook: $SUPPORTS_POST_COMPACT_HOOK | Effort Command: $SUPPORTS_EFFORT_COMMAND | BG Partial Results: $SUPPORTS_BG_PARTIAL_RESULTS"
 
     # v8.29.0: Context window control
     OCTOPUS_CONTEXT_WINDOW="${OCTOPUS_CONTEXT_WINDOW:-auto}"
@@ -8038,6 +8055,96 @@ build_review_fleet() {
 
 # review_run: canonical 3-round multi-LLM code review pipeline
 # WHY: replaces the single-model "codex exec review" dispatch with a
+# v9.0: Provider report card — prints post-run summary of provider status
+# Args: provider_status_file (one line per event: "provider|status|detail")
+# WHY: Mid-stream warnings vanish in terminal scroll. This prints AFTER all output,
+# making provider failures impossible to miss.
+print_provider_report() {
+    local status_file="$1"
+    local fallback_log="${HOME}/.claude-octopus/provider-fallbacks.log"
+
+    if [[ ! -f "$status_file" ]]; then
+        return 0
+    fi
+
+    # Determine status per provider
+    local codex_status="not used" gemini_status="not used" claude_status="✓ OK" perplexity_status="not used"
+    local codex_detail="" gemini_detail="" perplexity_detail=""
+    local had_fallback=false
+
+    while IFS='|' read -r provider status detail; do
+        case "$provider" in
+            codex)
+                if [[ "$status" == "ok" ]]; then
+                    codex_status="✓ OK"
+                elif [[ "$status" == "fallback" ]]; then
+                    codex_status="✗ FALLBACK"
+                    codex_detail="$detail"
+                    had_fallback=true
+                elif [[ "$status" == "auth-failed" ]]; then
+                    codex_status="✗ AUTH FAILED"
+                    codex_detail="$detail"
+                    had_fallback=true
+                fi
+                ;;
+            gemini)
+                if [[ "$status" == "ok" ]]; then
+                    gemini_status="✓ OK"
+                elif [[ "$status" == "fallback" ]]; then
+                    gemini_status="✗ FALLBACK"
+                    gemini_detail="$detail"
+                    had_fallback=true
+                fi
+                ;;
+            perplexity)
+                if [[ "$status" == "ok" ]]; then
+                    perplexity_status="✓ OK"
+                elif [[ "$status" == "fallback" ]]; then
+                    perplexity_status="✗ FALLBACK"
+                    perplexity_detail="$detail"
+                    had_fallback=true
+                fi
+                ;;
+        esac
+    done < "$status_file"
+
+    # Always print the report card
+    echo ""
+    echo "┌─────────────────────────────────────────────┐"
+    echo "│ 🐙 Provider Status                          │"
+    echo "│                                             │"
+    printf "│ 🔴 Codex:      %-28s│\n" "$codex_status"
+    [[ -n "$codex_detail" ]] && printf "│    → %-38s│\n" "$codex_detail"
+    printf "│ 🟡 Gemini:     %-28s│\n" "$gemini_status"
+    [[ -n "$gemini_detail" ]] && printf "│    → %-38s│\n" "$gemini_detail"
+    printf "│ 🔵 Claude:     %-28s│\n" "$claude_status"
+    printf "│ 🟣 Perplexity: %-28s│\n" "$perplexity_status"
+    [[ -n "$perplexity_detail" ]] && printf "│    → %-38s│\n" "$perplexity_detail"
+    if [[ "$had_fallback" == "true" ]]; then
+        echo "│                                             │"
+        echo "│ ⚠ Some providers failed — run /octo:doctor  │"
+    fi
+    echo "└─────────────────────────────────────────────┘"
+
+    # Persist failures for /octo:doctor
+    if [[ "$had_fallback" == "true" ]]; then
+        mkdir -p "$(dirname "$fallback_log")"
+        local ts
+        ts=$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)
+        while IFS='|' read -r provider status detail; do
+            if [[ "$status" == "fallback" || "$status" == "auth-failed" ]]; then
+                echo "[$ts] provider=$provider status=$status detail=$detail" >> "$fallback_log"
+            fi
+        done < "$status_file"
+        # Keep only last 50 entries
+        if [[ -f "$fallback_log" ]] && [[ $(wc -l < "$fallback_log") -gt 50 ]]; then
+            tail -50 "$fallback_log" > "${fallback_log}.tmp" && mv "${fallback_log}.tmp" "$fallback_log"
+        fi
+    fi
+
+    rm -f "$status_file"
+}
+
 # parallel fleet (Round 1) + verification (Round 2) + synthesis (Round 3)
 # that competes with CC Code Review's managed service.
 #
@@ -8049,11 +8156,26 @@ review_run() {
     # Parse profile fields (with defaults)
     local target focus provenance autonomy publish debate
     target=$(echo "$profile_json"     | jq -r '.target     // "staged"')
-    focus=$(echo "$profile_json"      | jq -r '.focus      // ["correctness"]  | join(",")')
+    focus=$(echo "$profile_json"      | jq -r '.focus      // ["correctness","security","architecture","tdd"]  | join(",")')
     provenance=$(echo "$profile_json" | jq -r '.provenance // "unknown"')
     autonomy=$(echo "$profile_json"   | jq -r '.autonomy   // "supervised"')
     publish=$(echo "$profile_json"    | jq -r '.publish    // "ask"')
     debate=$(echo "$profile_json"     | jq -r '.debate     // "auto"')
+
+    # v9.0: Provider status tracking for post-run report card
+    local provider_status_file
+    provider_status_file=$(mktemp "${TMPDIR:-/tmp}/octopus-provider-status.XXXXXX")
+
+    # v9.0: Preflight — check Codex auth before review pipeline
+    if command -v codex >/dev/null 2>&1; then
+        if ! check_codex_auth_freshness 2>/dev/null; then
+            log "WARN" "review_run: Codex auth may be stale — review fleet may fall back to claude-sonnet"
+            log "USER" "⚠ Codex auth check failed. Run 'codex auth' or /octo:doctor to fix. Falling back to claude-sonnet for Codex roles."
+            echo "codex|auth-failed|Run: codex auth" >> "$provider_status_file"
+        fi
+    else
+        echo "codex|not-installed|Install: npm i -g @openai/codex" >> "$provider_status_file"
+    fi
 
     local timestamp
     timestamp=$(date +%s)
@@ -8178,8 +8300,12 @@ $(echo "$all_findings" | jq -c '.')
 Return ONLY valid JSON with 'findings' array including verdict field."
 
     local verified_findings
-    verified_findings=$(run_agent_sync "codex" "$verifier_prompt" 180 "code-reviewer" "review") || {
+    verified_findings=$(run_agent_sync "codex" "$verifier_prompt" 180 "code-reviewer" "review") && {
+        echo "codex|ok|Round 2 verification" >> "$provider_status_file"
+    } || {
         log WARN "review_run: codex verifier failed, falling back to claude-sonnet"
+        log "USER" "⚠ Round 2: Codex unavailable → claude-sonnet (fallback). Codex API usage will NOT change."
+        echo "codex|fallback|Round 2 → claude-sonnet" >> "$provider_status_file"
         verified_findings=$(run_agent_sync "claude-sonnet" "$verifier_prompt" 180 "code-reviewer" "review") || {
             log WARN "review_run: verification failed entirely, using all findings as confirmed"
             verified_findings="{\"findings\":$(echo "$all_findings" | \
@@ -8206,8 +8332,12 @@ Return ONLY valid JSON with 'findings' array including verdict field."
 Findings: $(echo "$debate_candidates" | jq -c '.')
 Return JSON: {\"include\": [...finding titles...], \"exclude\": [...finding titles...]}"
             local debate_result
-            debate_result=$(run_agent_sync "codex" "$debate_prompt" 120 "code-reviewer" "review") || {
+            debate_result=$(run_agent_sync "codex" "$debate_prompt" 120 "code-reviewer" "review") && {
+                echo "codex|ok|Round 3 debate" >> "$provider_status_file"
+            } || {
                 log WARN "review_run: debate agent failed, including all contested findings"
+                log "USER" "⚠ Round 3: Codex debate gate unavailable — including all contested findings without debate."
+                echo "codex|fallback|Round 3 debate → skipped" >> "$provider_status_file"
                 debate_result="{\"include\":[],\"exclude\":[]}"
             }
             local exclude_titles
@@ -8262,6 +8392,9 @@ Return ONLY JSON: {\"findings\": [...ranked, deduplicated findings...]}"
     else
         render_terminal_report "$findings_file"
     fi
+
+    # v9.0: Print provider report card — always last, impossible to miss
+    print_provider_report "$provider_status_file"
 }
 
 # post_inline_comments: posts findings as inline PR comments via gh API
@@ -10690,6 +10823,17 @@ save_session_checkpoint() {
     update_metrics "phases_completed" "1" 2>/dev/null || true
     write_state_md 2>/dev/null || true
 
+    # v8.57: Notify claude-mem of phase completion (non-blocking, fault-tolerant)
+    local bridge_script="${SCRIPT_DIR}/claude-mem-bridge.sh"
+    if [[ -x "$bridge_script" ]] && "$bridge_script" available >/dev/null 2>&1; then
+        local workflow_name
+        workflow_name=$(jq -r '.workflow // "unknown"' "$SESSION_FILE" 2>/dev/null || echo "unknown")
+        "$bridge_script" observe "decision" \
+            "Octopus ${phase} phase ${status}" \
+            "Workflow: ${workflow_name}, Phase: ${phase}, Status: ${status}, Output: ${output_file}" \
+            2>/dev/null &
+    fi
+
     log DEBUG "Checkpoint saved: $phase ($status)"
 }
 
@@ -12107,6 +12251,12 @@ ${skill_context}"
         log "WARN" "Enterprise backend ($OCTOPUS_BACKEND) + CC < v2.1.73: agent model frontmatter may be silently downgraded. Upgrade to CC v2.1.73+ to fix."
     elif [[ "$SUPPORTS_FULL_MODEL_IDS" == "true" ]]; then
         log "DEBUG" "CC v2.1.74+: full model IDs (e.g. claude-opus-4-6) supported in agent frontmatter"
+    fi
+
+    # v8.57: CC v2.1.76+ preserves partial results when background agents are killed
+    # Multi-agentic workflows (/octo:research, /octo:parallel) can safely time out agents
+    if [[ "$SUPPORTS_BG_PARTIAL_RESULTS" == "true" ]]; then
+        log "DEBUG" "CC v2.1.76+: background agent partial results preserved on kill"
     fi
 
     log INFO "Spawning $agent_type agent (task: $task_id, role: ${role:-none})"
@@ -15270,6 +15420,37 @@ doctor_check_providers() {
         doctor_add "perplexity-api" "providers" "info" \
             "Perplexity not configured (optional)" "export PERPLEXITY_API_KEY=\"pplx-...\" for live web search"
     fi
+
+    # v9.0: Check recent provider fallback history
+    local fallback_log="${HOME}/.claude-octopus/provider-fallbacks.log"
+    if [[ -f "$fallback_log" ]]; then
+        local recent_failures=0 codex_failures=0 gemini_failures=0
+        local cutoff
+        cutoff=$(date -v-24H +%Y-%m-%d 2>/dev/null || date -d '24 hours ago' +%Y-%m-%d 2>/dev/null || echo "")
+        if [[ -n "$cutoff" ]]; then
+            while IFS= read -r line; do
+                local log_date="${line:1:10}"  # Extract date from [YYYY-MM-DDTHH:MM:SS]
+                if [[ "$log_date" > "$cutoff" || "$log_date" == "$cutoff" ]]; then
+                    ((recent_failures++)) || true
+                    [[ "$line" == *"provider=codex"* ]] && ((codex_failures++)) || true
+                    [[ "$line" == *"provider=gemini"* ]] && ((gemini_failures++)) || true
+                fi
+            done < "$fallback_log"
+        else
+            recent_failures=$(wc -l < "$fallback_log" | tr -d ' ')
+        fi
+        if [[ $recent_failures -gt 0 ]]; then
+            local detail="Last 24h:"
+            [[ $codex_failures -gt 0 ]] && detail="$detail Codex failed ${codex_failures}x"
+            [[ $gemini_failures -gt 0 ]] && detail="$detail Gemini failed ${gemini_failures}x"
+            doctor_add "provider-fallbacks" "providers" "warn" \
+                "${recent_failures} provider fallback(s) in last 24h" \
+                "${detail}. Check auth: codex auth / gemini auth. Log: ${fallback_log}"
+        else
+            doctor_add "provider-fallbacks" "providers" "pass" \
+                "No recent provider fallbacks" ""
+        fi
+    fi
 }
 
 # --- Category 2: Auth ---
@@ -15660,6 +15841,44 @@ doctor_check_skills() {
                 "CC autoMemoryDirectory configured (custom auto-memory path)" ""
         fi
     fi
+
+    # v8.57: Surface /effort command availability
+    if [[ "$SUPPORTS_EFFORT_COMMAND" == "true" ]]; then
+        doctor_add "effort-command" "skills" "info" \
+            "CC v2.1.76 /effort command available for mid-session effort adjustment" \
+            "Use /effort in Claude Code to change model effort level (low/medium/high) during a session"
+    fi
+
+    # v8.57: Surface worktree.sparsePaths for large monorepo optimization
+    if [[ "$SUPPORTS_WORKTREE_SPARSE_PATHS" == "true" ]]; then
+        local settings_file="${HOME}/.claude/settings.json"
+        local has_sparse="false"
+        if [[ -f "$settings_file" ]] && command -v jq &>/dev/null; then
+            has_sparse=$(jq 'has("worktree") and (.worktree | has("sparsePaths"))' "$settings_file" 2>/dev/null || echo "false")
+        fi
+        if [[ "$has_sparse" == "true" ]]; then
+            doctor_add "worktree-sparse-paths" "skills" "pass" \
+                "CC worktree.sparsePaths configured (sparse checkout for --worktree)" ""
+        else
+            doctor_add "worktree-sparse-paths-tip" "skills" "info" \
+                "CC v2.1.76 worktree.sparsePaths available for large monorepo optimization" \
+                "Set worktree.sparsePaths in settings to check out only specific directories in --worktree mode"
+        fi
+    fi
+
+    # v8.57: Surface MCP elicitation + PostCompact hook availability
+    if [[ "$SUPPORTS_MCP_ELICITATION" == "true" ]]; then
+        doctor_add "mcp-elicitation" "skills" "info" \
+            "CC v2.1.76 MCP elicitation available (MCP servers can request structured user input)" \
+            "MCP servers can now prompt for structured input mid-task via interactive dialogs"
+    fi
+
+    # v8.57: Warn about --plugin-dir behavioral change (one path per flag in v2.1.76+)
+    if [[ "$SUPPORTS_PLUGIN_DIR_OVERRIDE" == "true" ]] && version_compare "$CLAUDE_CODE_VERSION" "2.1.76" ">="; then
+        doctor_add "plugin-dir-one-path" "skills" "info" \
+            "CC v2.1.76 --plugin-dir accepts one path per flag (use repeated flags for multiple)" \
+            "If using multiple plugin dirs, change --plugin-dir 'a b' to --plugin-dir a --plugin-dir b"
+    fi
 }
 
 # --- Category 8: Conflicts ---
@@ -15688,6 +15907,19 @@ doctor_check_conflicts() {
     if [[ $conflicts -eq 0 ]]; then
         doctor_add "no-conflicts" "conflicts" "pass" \
             "No conflicting plugins detected" ""
+    fi
+
+    # v8.57: Detect companion plugins (complementary, not conflicting)
+    local claude_mem_dir=""
+    for dir in "$HOME"/.claude/plugins/cache/thedotmack/claude-mem/*/; do
+        [[ -d "$dir" ]] && claude_mem_dir="$dir" && break
+    done
+    if [[ -n "$claude_mem_dir" ]]; then
+        local mem_version
+        mem_version=$(basename "${claude_mem_dir%/}" 2>/dev/null || echo "unknown")
+        doctor_add "companion-claude-mem" "conflicts" "pass" \
+            "claude-mem v${mem_version} detected (companion — persistent cross-session memory)" \
+            "Octopus workflows can use claude-mem MCP tools (search, timeline, get_observations) for past session context"
     fi
 }
 
