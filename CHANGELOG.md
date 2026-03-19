@@ -1,3 +1,11 @@
+## [9.7.5] - 2026-03-19
+
+### Fixed
+
+- **Statusline version goes stale on plugin update**: `settings.json` contained a versioned cache path (e.g., `.../octo/9.6.1/hooks/...`) that never updated when the plugin upgraded. Added `statusline-resolver.sh` — a version-agnostic wrapper that finds the latest cached version via `sort -V`. New `statusline-auto-repair.sh` SessionStart hook auto-installs the resolver to `~/.claude-octopus/statusline.sh` and patches `settings.json` if it detects a stale versioned path.
+
+---
+
 ## [9.7.4] - 2026-03-19
 
 ### Changed
