@@ -61,6 +61,7 @@ source "${SCRIPT_DIR}/lib/secure.sh" 2>/dev/null || true
 # Provider detection & version checking (v9.7.7 extraction)
 source "${SCRIPT_DIR}/lib/providers.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/lib/dispatch.sh" 2>/dev/null || true
+source "${SCRIPT_DIR}/lib/review.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/lib/workflows.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/lib/doctor.sh" 2>/dev/null || true
 source "${SCRIPT_DIR}/lib/agent-sync.sh" 2>/dev/null || true
