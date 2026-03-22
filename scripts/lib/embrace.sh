@@ -40,33 +40,53 @@ get_dispatch_strategy() {
         fi
     fi
 
-    local has_codex=false has_gemini=false has_copilot=false
+    # v9.10.0: Detect all available providers for dispatch strategy
+    local has_codex=false has_gemini=false has_copilot=false has_qwen=false has_ollama=false
     command -v codex >/dev/null 2>&1 && has_codex=true
     command -v gemini >/dev/null 2>&1 && has_gemini=true
     command -v copilot >/dev/null 2>&1 && has_copilot=true
+    command -v qwen >/dev/null 2>&1 && has_qwen=true
+    command -v ollama >/dev/null 2>&1 && curl -sf http://localhost:11434/api/tags &>/dev/null && has_ollama=true
+
+    # Build available CLI providers list (excluding Claude which is always available)
+    local -a cli_providers=()
+    [[ "$has_codex" == true ]] && cli_providers+=(codex)
+    [[ "$has_gemini" == true ]] && cli_providers+=(gemini)
+    [[ "$has_copilot" == true ]] && cli_providers+=(copilot)
+    [[ "$has_qwen" == true ]] && cli_providers+=(qwen)
+    local cli_count=${#cli_providers[@]}
 
     case "$workflow" in
         review|security)
-            # Each provider misses different bugs — all 3 essential
-            if [[ "$has_codex" == true && "$has_gemini" == true && "$has_copilot" == true ]]; then
-                echo "4:codex,gemini,copilot,claude-sonnet:high"
+            # Each provider misses different bugs — more perspectives = better coverage
+            if [[ $cli_count -ge 3 ]]; then
+                local providers_str
+                providers_str=$(IFS=,; echo "${cli_providers[*]}")
+                echo "$((cli_count + 1)):${providers_str},claude-sonnet:high"
             elif [[ "$has_codex" == true && "$has_gemini" == true ]]; then
                 echo "3:codex,gemini,claude-sonnet:high"
             elif [[ "$has_codex" == true ]]; then echo "2:codex,claude-sonnet:high"
             elif [[ "$has_gemini" == true ]]; then echo "2:gemini,claude-sonnet:high"
+            elif [[ "$has_qwen" == true ]]; then echo "2:qwen,claude-sonnet:medium"
             else echo "1:claude-sonnet:medium"; fi ;;
         architecture)
-            # Codex + Gemini maximize training bias diversity
+            # Maximize training bias diversity
             if [[ "$has_codex" == true && "$has_gemini" == true ]]; then
                 echo "2:codex,gemini:high"
             elif [[ "$has_codex" == true ]]; then echo "2:codex,claude-sonnet:medium"
             elif [[ "$has_gemini" == true ]]; then echo "2:gemini,claude-sonnet:medium"
+            elif [[ "$has_qwen" == true ]]; then echo "2:qwen,claude-sonnet:medium"
             else echo "1:claude-sonnet:low"; fi ;;
         research|*)
-            # Gemini solo 64% vs multi-LLM 65% — 2 providers sufficient
-            if [[ "$has_gemini" == true && "$has_copilot" == true ]]; then echo "3:gemini,copilot,claude-sonnet:high"
+            # Research benefits from diverse perspectives
+            if [[ $cli_count -ge 2 ]]; then
+                local providers_str
+                providers_str=$(IFS=,; echo "${cli_providers[*]}")
+                echo "$((cli_count + 1)):${providers_str},claude-sonnet:high"
             elif [[ "$has_gemini" == true ]]; then echo "2:gemini,claude-sonnet:high"
             elif [[ "$has_codex" == true ]]; then echo "2:codex,claude-sonnet:medium"
+            elif [[ "$has_qwen" == true ]]; then echo "2:qwen,claude-sonnet:medium"
+            elif [[ "$has_copilot" == true ]]; then echo "2:copilot,claude-sonnet:medium"
             else echo "1:claude-sonnet:medium"; fi ;;
     esac
 }

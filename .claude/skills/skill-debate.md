@@ -40,9 +40,13 @@ Participants:
 🟡 Gemini CLI - Ecosystem and strategic perspective
 🟠 Sonnet 4.6 - Pragmatic implementer perspective
 🐙 Claude (Opus) - Moderator and synthesis
+🟢 Copilot CLI - GitHub-native perspective (if available)
+🟤 Qwen CLI - Alternative model perspective (if available)
 ```
 
-**This is NOT optional.** Users need to see which AI providers are active and understand they are being charged for external API calls (🔴 🟡). Sonnet (🟠) is included with Claude Code — no additional cost.
+**Core four always participate:** Codex (🔴), Gemini (🟡), Sonnet (🟠), and Claude/Opus (🐙). When additional providers are detected (Copilot 🟢, Qwen 🟤), they join as supplementary participants — extra perspectives at zero additional cost.
+
+**This is NOT optional.** Users need to see which AI providers are active. External API calls (🔴 🟡) use provider API keys. Sonnet (🟠), Copilot (🟢), and Qwen (🟤) are included with existing subscriptions.
 
 ---
 

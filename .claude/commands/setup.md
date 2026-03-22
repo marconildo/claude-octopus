@@ -156,6 +156,23 @@ qwen
 
 **Note:** Qwen is fully optional. It uses the same dispatch pattern as Gemini CLI.
 
+## New Provider Detection
+
+After running provider detection, if you detect new providers (Copilot, Qwen, Ollama) that are installed but NOT yet used in workflows, **proactively inform the user**:
+
+```
+💡 New providers detected! You have extra tentacles available:
+  🟢 Copilot CLI — zero-cost research (using your GitHub subscription)
+  🟤 Qwen CLI — free-tier research (1,000-2,000 requests/day)
+  ⚫ Ollama — local LLM (fully offline, zero cost)
+
+These will automatically join your workflows. No configuration needed —
+Claude Octopus detects and uses them when running /octo:research,
+/octo:review, /octo:debate, and other multi-provider commands.
+```
+
+**Only show this if the user previously had ONLY Codex/Gemini and new providers are now detected.** Don't show it if they've already seen it.
+
 ## If You See: CODEX_AUTH=none or GEMINI_AUTH=none
 
 The CLI is installed but not authenticated. Configure authentication:
