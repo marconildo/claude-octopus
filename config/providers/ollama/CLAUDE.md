@@ -98,7 +98,7 @@ Zero — fully local, no API keys needed.
 ## Limitations
 
 - Quality varies significantly by model size
-- No streaming in CLI mode (batch output)
+- CLI output includes terminal control sequences (requires cleanup for programmatic use)
 - Limited context window compared to cloud providers
 - Not suitable for primary orchestration role
 - Requires sufficient local hardware (RAM/GPU) for larger models

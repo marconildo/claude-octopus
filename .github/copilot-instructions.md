@@ -6,11 +6,11 @@ structured Double Diamond workflows.
 
 ## Key Architecture
 
-- `scripts/orchestrate.sh` — Main orchestration script (~22K lines)
+- `scripts/orchestrate.sh` — Main orchestration entry point (~5K lines + ~22K in scripts/lib/)
 - `scripts/lib/` — Modular libraries (providers, doctor, model-resolver, dispatch)
-- `.claude/skills/` — Skill definitions (50+ skills)
-- `.claude/commands/` — Slash commands (39+ commands)
-- `agents/` — Subagent definitions (10 agents)
+- `.claude/skills/` — Skill definitions (50 skills)
+- `.claude/commands/` — Slash commands (47 commands)
+- `.claude/agents/` — Subagent definitions (10 agents)
 - `mcp-server/` — MCP server adapter (bridges MCP clients to orchestrate.sh)
 - `openclaw/` — OpenClaw extension adapter
 

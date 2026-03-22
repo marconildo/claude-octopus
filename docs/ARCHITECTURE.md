@@ -23,7 +23,7 @@ Claude Octopus coordinates **five core AI providers** (plus two optional local/s
 |Cdx | |Gem| |Cl| |Pp| |OR|  |Ollma|  |Coplt |
 |CLI | |CLI| |AI| |API |API|  |local|  |aspir.|
 +----+ +---+ +--+ +--+ +--+  +-----+  +------+
-  Core (5 providers)          Optional (2)
+  Core (5 providers)          Optional (2, fully wired)
 ```
 
 ---
@@ -38,7 +38,7 @@ Claude Octopus coordinates **five core AI providers** (plus two optional local/s
 | **Perplexity** | API-only | Sonar Pro / Sonar | Your `PERPLEXITY_API_KEY` |
 | **OpenRouter** | API-only | 100+ models (GLM-5, Kimi K2.5, DeepSeek R1, etc.) | Your `OPENROUTER_API_KEY` |
 | **Ollama** *(optional)* | `ollama run <model>` | Local models (llama3.3, mistral, etc.) | Free (local) |
-| **Copilot** *(aspirational)* | — | — | GitHub subscription |
+| **Copilot** *(optional)* | `copilot -p` | GitHub models (Claude/GPT/Gemini) | GitHub Copilot subscription |
 
 > **Note:** Models are as of March 2026. The orchestrate.sh script uses the latest available models. Only Claude is required — all others are optional and auto-detected.
 

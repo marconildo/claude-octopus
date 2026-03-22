@@ -158,9 +158,9 @@ Or skip the table — type `/octo:auto <what you want>` or just say `octo <what 
 
 ## How It Works
 
-### Five Providers, One Workflow
+### Seven Providers, One Workflow
 
-Claude Octopus coordinates up to five AI providers across every workflow:
+Claude Octopus coordinates up to seven AI providers across every workflow:
 
 | Provider | Role |
 |----------|------|
@@ -168,6 +168,8 @@ Claude Octopus coordinates up to five AI providers across every workflow:
 | 🟡 Gemini (Google) | Ecosystem breadth — alternatives, security review, research synthesis |
 | 🟣 Perplexity | Live web search — CVE lookups, dependency research, current docs |
 | 🌐 OpenRouter | Alternative model routing — access 100+ models via single API |
+| 🟢 Copilot (GitHub) | Zero-cost research — uses existing GitHub Copilot subscription |
+| ⚫ Ollama (Local) | Zero-cost local LLM — offline, privacy-sensitive, fallback |
 | 🔵 Claude (Anthropic) | Orchestration — quality gates, consensus building, final synthesis |
 
 Providers run in parallel for research, sequentially for problem scoping, and adversarially for review. A 75% consensus quality gate prevents questionable work from shipping. Only Claude is required — all others are optional and auto-detected.

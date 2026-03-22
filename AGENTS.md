@@ -20,7 +20,7 @@ AI coding tools that support agent discovery (e.g., GitHub Copilot coding agent)
 
 ## Agent Configuration
 
-Agent definitions are in `agents/` as markdown files with YAML frontmatter.
+Agent definitions are in `.claude/agents/` as markdown files with YAML frontmatter.
 Each agent specifies its system prompt, available tools, and optional `readonly: true`
 for agents that should only read, not modify files.
 

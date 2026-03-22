@@ -1,7 +1,7 @@
 {
   "name": "octo",
-  "version": "9.9.1",
-  "description": "Multi-tentacled orchestrator using Double Diamond methodology. (v9.9.1) Copilot CLI + Ollama providers fully wired, 7-provider architecture. 32 expert personas, 47 commands, 50 skills. Commands use '/octo:*', including the '/octo:auto' smart router. Run /octo:setup for guided setup.",
+  "version": "9.9.2",
+  "description": "Multi-tentacled orchestrator using Double Diamond methodology. (v9.9.2) 7-provider architecture, consolidated docs, 47 commands, 50 skills. 32 expert personas, 47 commands, 50 skills. Commands use '/octo:*', including the '/octo:auto' smart router. Run /octo:setup for guided setup.",
   "author": {
     "name": "nyldn"
   },

@@ -1,3 +1,34 @@
+## [9.9.2] - 2026-03-22
+
+### Changed
+
+- **Documentation consolidation**: Removed 9 stale/redundant docs from plugin (archived to dev repo). Kept 7 user-facing docs + 5 provider configs. Rewrote `docs/README.md` index.
+- **Provider counts normalized to 7** across README.md ("Seven Providers"), ARCHITECTURE.md (Copilot no longer "aspirational"), CLAUDE.md (detection section, modular config tree), COMMAND-REFERENCE.md ("47 commands"), copilot-instructions.md.
+- **Debate references updated to four-way** across COMMAND-REFERENCE.md (was "3-way").
+
+### Added
+
+- **`config/providers/copilot/CLAUDE.md`**: New provider config file for GitHub Copilot CLI (was missing).
+
+### Removed
+
+- `docs/CLI-REFERENCE.md` — CLI flags are in orchestrate.sh `--help`
+- `docs/PLUGIN-ARCHITECTURE.md` — Overlapped ARCHITECTURE.md, perpetually stale
+- `docs/FACTORY-AI.md` — Factory-specific, stale counts
+- `docs/SANDBOX-CONFIGURATION.md` — Documented invalid mode (`danger-full-access`); valid modes are in dispatch.sh
+- `docs/NATIVE-INTEGRATION.md` — Outdated v8.15 content
+- `docs/INTERACTIVE_QUESTIONS_GUIDE.md` — Developer reference, rarely used
+- `docs/PDF_PAGE_SELECTION.md` — Belongs in document-skills plugin
+- `docs/RELEASE_AUTOMATION.md` — Internal workflow, moved to dev repo
+- `docs/agent-decision-tree.md` — Internal design doc, moved to dev repo
+
+### Fixed
+
+- **Ollama CLAUDE.md**: Corrected false "no streaming in CLI mode" claim.
+- **AGENTS.md**: Fixed path `agents/` → `.claude/agents/`.
+
+---
+
 ## [9.9.1] - 2026-03-22
 
 ### Fixed
