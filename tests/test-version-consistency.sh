@@ -74,6 +74,13 @@ if [[ -f "$MARKETPLACE_JSON" ]]; then
     else
         fail "marketplace.json plugin version mismatch" "Found: $MARKETPLACE_VERSION, Expected: $EXPECTED_VERSION"
     fi
+    # Also check metadata version matches
+    METADATA_VERSION=$(grep '"version"' "$MARKETPLACE_JSON" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    if [[ "$METADATA_VERSION" == "$EXPECTED_VERSION" ]]; then
+        pass "marketplace.json metadata version $EXPECTED_VERSION"
+    else
+        fail "marketplace.json metadata version mismatch" "Found: $METADATA_VERSION, Expected: $EXPECTED_VERSION"
+    fi
 else
     fail "marketplace.json not found" "Expected: $MARKETPLACE_JSON"
 fi

@@ -265,22 +265,24 @@ When the user invokes `/debate`:
 
 ### Step 1: Check Provider Availability & Display Banner
 
-**CRITICAL: Check which AI providers are available and display the visual indicator banner:**
+**MANDATORY: You MUST use the Bash tool to run this provider check BEFORE displaying the banner. Do NOT skip it. Do NOT assume availability.**
 
-First, check availability:
 ```bash
-codex_available="✗ Not installed"
-if command -v codex >/dev/null 2>&1; then
-  codex_available="✓"
-fi
-
-gemini_available="✗ Not installed"
-if command -v gemini >/dev/null 2>&1; then
-  gemini_available="✓"
-fi
+echo "PROVIDER_CHECK_START"
+printf "codex:%s\n" "$(command -v codex >/dev/null 2>&1 && echo available || echo missing)"
+printf "gemini:%s\n" "$(command -v gemini >/dev/null 2>&1 && echo available || echo missing)"
+printf "perplexity:%s\n" "$([ -n "${PERPLEXITY_API_KEY:-}" ] && echo available || echo missing)"
+printf "opencode:%s\n" "$(command -v opencode >/dev/null 2>&1 && echo available || echo missing)"
+printf "copilot:%s\n" "$(command -v copilot >/dev/null 2>&1 && echo available || echo missing)"
+printf "qwen:%s\n" "$(command -v qwen >/dev/null 2>&1 && echo available || echo missing)"
+printf "ollama:%s\n" "$(command -v ollama >/dev/null 2>&1 && curl -sf http://localhost:11434/api/tags >/dev/null 2>&1 && echo available || echo missing)"
+printf "openrouter:%s\n" "$([ -n "${OPENROUTER_API_KEY:-}" ] && echo available || echo missing)"
+echo "PROVIDER_CHECK_END"
 ```
 
-Then immediately output the required visual indicator banner:
+**Use the ACTUAL results below. PROHIBITED: Showing only "🔵 Claude: Available ✓" without listing all providers.**
+
+Then display the banner with real provider status:
 ```
 🐙 **CLAUDE OCTOPUS ACTIVATED** - AI Debate Hub
 🐙 Debate: [Topic/question being debated]
