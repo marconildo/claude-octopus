@@ -20,6 +20,7 @@ POSTHOG_HOST="${POSTHOG_HOST:-https://us.i.posthog.com}"
 
 # Skip silently if not configured or opted out
 [[ -z "$POSTHOG_PROJECT_KEY" ]] && exit 0
+[[ "${OCTOPUS_TELEMETRY_OPT_OUT:-0}" == "1" ]] && exit 0
 [[ "${POSTHOG_OPT_OUT:-0}" == "1" ]] && exit 0
 
 # ── Anonymous identity ───────────────────────────────────────────────────────
