@@ -1,3 +1,11 @@
+## [9.15.1] - 2026-03-27
+
+### Fixed
+
+- **dispatch.sh Codex `--full-auto` flag** — All four `codex exec` variants in `get_agent_command()` now include `--full-auto`, preventing hangs in non-interactive execution (debate, sync dispatch, spawn). (#212, #213)
+- **doctor hook validation false positives** — Hook script path parser now handles `bash`-wrapped commands and env-var prefixed commands (`KEY=value script.sh`), eliminating 5 false failures in `/octo:doctor` hooks check. (#214)
+- **MCP server zod compatibility** — Bumped `zod` from 3.24.1 to 3.25.67 in `mcp-server/package.json` to resolve `ERR_PACKAGE_PATH_NOT_EXPORTED` on `zod/v4` subpath required by `@modelcontextprotocol/sdk` 1.26.0. (#215)
+
 ## [9.15.0] - 2026-03-26
 
 ### Added
