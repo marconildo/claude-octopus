@@ -1,3 +1,14 @@
+## [9.14.1] - 2026-03-26
+
+### Added
+
+- **Loop self-regulation** — Configurable weights for WTF-likelihood scoring and sliding-window stuck detection. Users can override defaults (revert penalty, unrelated-files penalty, threshold, hard cap, window size) via `~/.claude-octopus/loop-config.conf`.
+- **Self-regulation wired into flow-develop** — Iterative development cycles now track WTF score and pattern detection, preventing runaway implementation loops.
+- **Self-regulation wired into skill-debug** — Debug fix loops now track WTF score alongside the existing 3-strike rule, adding quantitative drift detection to fix attempts.
+- 13 new tests for configurable weights, flow-develop wiring, and skill-debug wiring (33 total in test-loop-self-regulation.sh).
+
+---
+
 ## [9.14.0] - 2026-03-26
 
 ### Added

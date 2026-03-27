@@ -237,6 +237,31 @@ When error is deep in call stack:
 
 ---
 
+## Self-Regulation Score (Debug Fix Loops)
+
+When debugging involves multiple fix attempts, track a **WTF score** to detect runaway fix loops. This complements the 3-Strike Rule above with quantitative drift detection.
+
+**Track these signals** (default weights, override via `~/.claude-octopus/loop-config.conf`):
+
+| Event | Score Impact |
+|-------|-------------|
+| Revert (git revert, undo, roll back a fix) | **+15%** |
+| Touching files unrelated to the bug | **+20%** |
+| A fix that requires changing >3 files | **+5%** |
+| After the 15th fix attempt | **+1% per additional fix** |
+| All remaining issues are Low severity | **+10%** |
+
+**If WTF score exceeds 20%** — STOP immediately, even if under the 3-strike limit. Show the score breakdown and ask the user whether to continue.
+
+**Also watch for stuck patterns**: If the same error message appears 3+ times across fix attempts, or you see A→B→A→B oscillation (fix X breaks Y, fix Y breaks X), announce the cycle and HALT on second detection.
+
+Report the score with each fix attempt:
+```
+Fix attempt 2 | Self-regulation: 15% (1 revert, 0 unrelated files)
+```
+
+---
+
 ## Strategy Rotation
 
 After 2 failed fix attempts, stop and reconsider the root cause before trying another fix. If the strategy-rotation hook fires, it means you have been repeating a failing approach. Do not continue down the same path — return to Phase 1 and investigate from a different angle.

@@ -7,8 +7,8 @@ Multi-LLM orchestration plugin for Claude Code — coordinates Codex, Gemini, Pe
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-9.14.0-blue" alt="Version 9.14.0">
-  <img src="https://img.shields.io/badge/Claude_Code-v2.1.50+-blueviolet" alt="Requires Claude Code v2.1.50+">
+  <img src="https://img.shields.io/badge/Version-9.14.1-blue" alt="Version 9.14.1">
+  <img src="https://img.shields.io/badge/Claude_Code-v2.1.83+-blueviolet" alt="Requires Claude Code v2.1.83+">
   <img src="https://img.shields.io/badge/Factory_AI-Compatible-orange" alt="Factory AI Compatible">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
 </p>

@@ -452,7 +452,9 @@ Maintain a mental window of the **last 10 iterations** (or fewer if less than 10
 
 ### WTF-Likelihood Score
 
-Track a cumulative score starting at 0%. Each event adds to the score:
+Track a cumulative score starting at 0%. Each event adds to the score.
+
+**Default weights** (override via `~/.claude-octopus/loop-config.conf`):
 
 | Event | Score Impact |
 |-------|-------------|
@@ -468,6 +470,25 @@ Track a cumulative score starting at 0%. Each event adds to the score:
 3. Ask the user: "Continue with a different approach, or stop here?"
 
 **Hard cap:** 50 iterations regardless of score or progress. No exceptions.
+
+### Configurable Weights
+
+At loop start, check for `~/.claude-octopus/loop-config.conf`. If it exists, read the key=value pairs and use them instead of defaults. Format:
+
+```conf
+# Loop Self-Regulation Configuration
+WINDOW_SIZE=10
+REVERT_PENALTY=15
+UNRELATED_FILES_PENALTY=20
+LARGE_FIX_PENALTY=5
+AFTER_FIX_15_PENALTY=1
+ALL_LOW_SEVERITY_PENALTY=10
+WTF_THRESHOLD=20
+HARD_CAP=50
+STUCK_THRESHOLD=3
+```
+
+If the file does not exist, use the defaults shown above. Users can create this file to tune sensitivity for their workflow.
 
 ### How to Track
 

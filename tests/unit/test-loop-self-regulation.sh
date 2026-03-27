@@ -128,9 +128,89 @@ else
     fail "Deliver has anti-rationalization prompts" "missing prompts"
 fi
 
+# ── Configurable weights via config file ─────────────────────────────────────
+
+if grep -q 'loop-config.conf' "$LOOP_SKILL" 2>/dev/null; then
+    pass "References loop-config.conf for configurable weights"
+else
+    fail "References loop-config.conf for configurable weights" "missing config file reference"
+fi
+
+if grep -qi 'WINDOW_SIZE\|REVERT_PENALTY\|WTF_THRESHOLD' "$LOOP_SKILL" 2>/dev/null; then
+    pass "Config file documents key=value format"
+else
+    fail "Config file documents key=value format" "missing config key examples"
+fi
+
+if grep -qi 'defaults\|default.*weight\|not exist.*use' "$LOOP_SKILL" 2>/dev/null; then
+    pass "Falls back to defaults when config absent"
+else
+    fail "Falls back to defaults when config absent" "missing fallback behavior"
+fi
+
+# ── Self-regulation wired into flow-develop ──────────────────────────────────
+
+DEVELOP_SKILL="$PROJECT_ROOT/.claude/skills/flow-develop.md"
+
+if grep -qi 'Self-Regulation.*Iterative\|self-regulation.*develop' "$DEVELOP_SKILL" 2>/dev/null; then
+    pass "flow-develop has self-regulation section"
+else
+    fail "flow-develop has self-regulation section" "missing section"
+fi
+
+if grep -q 'WTF score' "$DEVELOP_SKILL" 2>/dev/null; then
+    pass "flow-develop references WTF scoring"
+else
+    fail "flow-develop references WTF scoring" "missing WTF reference"
+fi
+
+if grep -q 'loop-config.conf' "$DEVELOP_SKILL" 2>/dev/null; then
+    pass "flow-develop references config file"
+else
+    fail "flow-develop references config file" "missing config reference"
+fi
+
+if grep -q '50 iterations' "$DEVELOP_SKILL" 2>/dev/null; then
+    pass "flow-develop has hard cap"
+else
+    fail "flow-develop has hard cap" "missing hard cap"
+fi
+
+# ── Self-regulation wired into skill-debug ───────────────────────────────────
+
+if grep -qi 'Self-Regulation Score.*Debug\|WTF score' "$DEBUG_SKILL" 2>/dev/null; then
+    pass "skill-debug has WTF scoring section"
+else
+    fail "skill-debug has WTF scoring section" "missing WTF scoring in debug"
+fi
+
+if grep -q 'loop-config.conf' "$DEBUG_SKILL" 2>/dev/null; then
+    pass "skill-debug references config file"
+else
+    fail "skill-debug references config file" "missing config reference"
+fi
+
+if grep -q '+15%' "$DEBUG_SKILL" 2>/dev/null; then
+    pass "skill-debug has revert penalty"
+else
+    fail "skill-debug has revert penalty" "missing revert weight in debug"
+fi
+
+if grep -qi 'exceeds 20%.*STOP\|score.*20%' "$DEBUG_SKILL" 2>/dev/null; then
+    pass "skill-debug WTF threshold triggers stop"
+else
+    fail "skill-debug WTF threshold triggers stop" "missing threshold in debug"
+fi
+
+if grep -q 'Self-regulation:' "$DEBUG_SKILL" 2>/dev/null; then
+    pass "skill-debug shows score in fix attempts"
+else
+    fail "skill-debug shows score in fix attempts" "missing score display in debug"
+fi
+
 # ── No attribution references ─────────────────────────────────────────────────
 
-for f in "$LOOP_SKILL" "$DEBUG_SKILL" "$DELIVER_SKILL"; do
+for f in "$LOOP_SKILL" "$DEBUG_SKILL" "$DELIVER_SKILL" "$DEVELOP_SKILL"; do
     fname=$(basename "$f")
     if grep -qi 'gstack\|gsd-2\|temm1e' "$f" 2>/dev/null; then
         fail "$fname has no attribution" "found prohibited reference"
