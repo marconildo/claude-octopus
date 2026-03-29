@@ -34,7 +34,7 @@ Every AI model has blind spots. Claude Octopus puts up to eight of them on every
 
 | Version | Best Features |
 |---------|--------------|
-| **v9** (current) | 8 providers (Codex, Gemini, Copilot, Qwen, Ollama, Perplexity, OpenRouter, Claude). Four-way AI debates. Smart router — just say what you need. 92% faster execution. Context-aware warnings. Session handoff across conversations. Adversarial review in every workflow. |
+| **v9** (current) | Up to 8 providers (Codex, Gemini, Copilot, Qwen, Ollama, Perplexity, OpenRouter, OpenCode). Four-way AI debates. Smart router — just say what you need. Circuit breakers with automatic provider recovery. Loop self-regulation stops runaway agents. HUD statusline with tool tracking. Codex CLI cross-compatibility. Cache-aligned prompts for 90% cost savings on repeated calls. |
 | **v8** | Multi-LLM code review with inline PR comments. Parallel workstreams in isolated git worktrees. Reaction engine — auto-responds to CI failures. 32 specialized personas. Dark Factory autonomous pipeline. |
 | **v7** | Double Diamond workflow. Multi-provider dispatch. Quality gates and consensus scoring. Configurable sandbox modes. |
 
