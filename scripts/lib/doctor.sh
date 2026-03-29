@@ -182,6 +182,40 @@ doctor_check_providers() {
             "Qwen CLI not installed (optional)" "npm install -g @qwen-code/qwen-code — free-tier research via Qwen OAuth"
     fi
 
+    # OpenCode CLI (optional — multi-provider router, v9.11.0)
+    if command -v opencode &>/dev/null; then
+        local opencode_auth="none"
+        # Portable timeout: prefer gtimeout (macOS via coreutils), fallback to timeout
+        local _timeout_cmd="timeout"
+        command -v gtimeout &>/dev/null && _timeout_cmd="gtimeout"
+        if [[ -f "${HOME}/.local/share/opencode/auth.json" ]]; then
+            if "$_timeout_cmd" 3 opencode auth list &>/dev/null; then
+                opencode_auth="multi"
+            else
+                opencode_auth="expired"
+            fi
+        fi
+        # Check env-based auth if file-based auth not found
+        if [[ "$opencode_auth" == "none" ]]; then
+            if [[ -n "${GITHUB_TOKEN:-}" || -n "${OPENROUTER_API_KEY:-}" || -n "${Z_AI_API_KEY:-}" || -n "${MINIMAX_API_KEY:-}" ]]; then
+                opencode_auth="env"
+            fi
+        fi
+        if [[ "$opencode_auth" != "none" && "$opencode_auth" != "expired" ]]; then
+            doctor_add "opencode-cli" "providers" "pass" \
+                "OpenCode CLI installed (auth: ${opencode_auth})" "$(command -v opencode) — multi-provider router (google, openai, z-ai, openrouter)"
+        elif [[ "$opencode_auth" == "expired" ]]; then
+            doctor_add "opencode-cli" "providers" "warn" \
+                "OpenCode CLI installed but auth expired" "Run: opencode auth login (to refresh credentials)"
+        else
+            doctor_add "opencode-cli" "providers" "warn" \
+                "OpenCode CLI installed but not authenticated" "Run: opencode auth login (or set GITHUB_TOKEN/OPENROUTER_API_KEY)"
+        fi
+    else
+        doctor_add "opencode-cli" "providers" "info" \
+            "OpenCode CLI not installed (optional)" "npm install -g opencode-ai — multi-provider router for google, openai, z-ai models"
+    fi
+
     # v9.0: Check recent provider fallback history
     local fallback_log="${HOME}/.claude-octopus/provider-fallbacks.log"
     if [[ -f "$fallback_log" ]]; then

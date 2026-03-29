@@ -53,6 +53,7 @@ Models are resolved using a 7-tier precedence system (use `OCTOPUS_TRACE_MODELS=
    - `OCTOPUS_CODEX_MODEL` - Override all codex model selection
    - `OCTOPUS_GEMINI_MODEL` - Override all gemini model selection
    - `OCTOPUS_PERPLEXITY_MODEL` - Override perplexity model selection
+   - `OCTOPUS_OPENCODE_MODEL` - Override all OpenCode model selection
 
 2. **Native Claude Code settings** (Tier 0.5)
    - `CLAUDE_MODEL` env var - Only applies when provider is `claude`
@@ -80,6 +81,7 @@ Models are resolved using a 7-tier precedence system (use `OCTOPUS_TRACE_MODELS=
    - Gemini: `gemini-3.1-pro-preview` (standard), `gemini-3-flash-preview` (fast)
    - Claude: `claude-sonnet-4.6` (standard), `claude-opus-4.6` (opus)
    - Perplexity: `sonar-pro` (standard), `sonar` (fast)
+   - OpenCode: `google/gemini-2.5-flash` (default/fast)
 
 ## Debugging Model Selection
 
@@ -167,6 +169,22 @@ Requires `OPENROUTER_API_KEY` to be set.
 | `gemini-3.1-pro-preview` | Premium quality research | $2.50/$10.00 per MTok |
 | `gemini-3-flash-preview` | Fast, low-cost tasks | $0.25/$1.00 per MTok |
 
+### OpenCode (v9.11.0)
+
+OpenCode is a multi-provider router — models use `provider/model` format. Run `opencode models` for the full catalog.
+
+| Tier | Model | Backend | Best For | Cost |
+|------|-------|---------|----------|------|
+| Budget | `google/gemini-2.5-flash` | Google | Fast, free-tier tasks | Free (OAuth) |
+| Premium | `openai/gpt-5.4` | OpenAI | Complex implementation | $2.50/$15.00 per MTok |
+| Free | `opencode/gpt-5-nano` | OpenCode | Zero-cost iteration | Free |
+| Research | `z-ai/glm-5.1` | Z.AI | Code review specialist | $0.80/$2.56 per MTok |
+
+Configure default: `/octo:model-config opencode google/gemini-2.5-flash`
+Configure capability: `/octo:model-config opencode.research z-ai/glm-5.1`
+
+Requires `opencode auth login` (OAuth) and/or backend-specific API keys.
+
 ## Phase Routing
 
 Contextual phase routing selects the best model for each workflow phase:
@@ -222,6 +240,11 @@ Location: `~/.claude-octopus/config/providers.json`
       "fallback": "gemini-3-flash-preview",
       "flash": "gemini-3-flash-preview",
       "image": "gemini-3-pro-image-preview"
+    },
+    "opencode": {
+      "default": "google/gemini-2.5-flash",
+      "fast": "google/gemini-2.5-flash",
+      "research": "z-ai/glm-5.1"
     }
   },
   "routing": {
@@ -236,9 +259,9 @@ Location: `~/.claude-octopus/config/providers.json`
     }
   },
   "tiers": {
-    "budget": { "codex": "mini", "gemini": "flash" },
-    "standard": { "codex": "default", "gemini": "default" },
-    "premium": { "codex": "default", "gemini": "default" }
+    "budget": { "codex": "mini", "gemini": "flash", "opencode": "fast" },
+    "standard": { "codex": "default", "gemini": "default", "opencode": "default" },
+    "premium": { "codex": "default", "gemini": "default", "opencode": "default" }
   },
   "overrides": {}
 }
@@ -260,6 +283,8 @@ If your config file uses an older format (v1.0 or v2.0), it will be automaticall
 | `OCTOPUS_CODEX_ALLOWED_MODELS` | Allowlist for Codex models | `gpt-5.4,gpt-5.2-codex` |
 | `OCTOPUS_GEMINI_ALLOWED_MODELS` | Allowlist for Gemini models | `gemini-3-flash-preview` |
 | `OCTOPUS_GEMINI_SANDBOX` | Gemini execution mode | `headless` (default) |
+| `OCTOPUS_OPENCODE_MODEL` | Override all OpenCode model selection | `google/gemini-2.5-flash` |
+| `OCTOPUS_OPENCODE_ALLOWED_MODELS` | Allowlist for OpenCode models | `google/gemini-2.5-flash,openai/gpt-5.4` |
 
 ## Spark vs Full Codex: When to Use Which
 
@@ -275,7 +300,9 @@ If your config file uses an older format (v1.0 or v2.0), it will be automaticall
 
 ## Valid Providers
 
-The following providers can be configured: `codex`, `gemini`, `claude`, `perplexity`, `openrouter`.
+The following providers can be configured: `codex`, `gemini`, `claude`, `perplexity`, `openrouter`, `opencode`.
+
+Capability-specific configuration uses dot syntax: `<provider>.<capability> <model>` (e.g., `opencode.research z-ai/glm-5.1`).
 
 Custom/local providers (e.g., Ollama proxies) can be set using the `--force` flag:
 ```bash
@@ -296,6 +323,7 @@ When the user invokes `/octo:model-config`, you MUST:
    - No args → View current configuration including phase routing and cost mode
    - `show phases` → Display formatted phase routing table
    - `<provider> <model>` → Set model (persistent)
+   - `<provider>.<capability> <model>` → Set capability-specific model (e.g., `opencode.research z-ai/glm-5.1`)
    - `<provider> <model> --session` → Set model (session only)
    - `phase <phase> <model>` → Set phase-specific model routing
    - `reset <provider|all>` → Reset to defaults
@@ -336,6 +364,21 @@ When the user invokes `/octo:model-config`, you MUST:
    ```
    The function validates provider (whitelist), model name (injection safety), and uses atomic file operations.
    Show the updated config after setting.
+
+   **Dot syntax for capabilities** (`<provider>.<capability> <model>`):
+   If the provider argument contains a dot (e.g., `opencode.research`):
+   - Split on `.`: provider=`opencode`, capability=`research`
+   - Validate the base provider against the whitelist
+   - Write to `.providers.<provider>.<capability>` in the config file:
+
+   ```bash
+   local config_file="${HOME}/.claude-octopus/config/providers.json"
+   jq --arg p "opencode" --arg c "research" --arg m "z-ai/glm-5.1" \
+     '.providers[$p][$c] = $m' "$config_file" > "${config_file}.tmp.$$" && mv "${config_file}.tmp.$$" "$config_file"
+   echo "✓ Set opencode.research → z-ai/glm-5.1"
+   ```
+
+   This works for any provider, not just OpenCode (e.g., `codex.reasoning o3`).
 
 5. **Set Phase Routing** (`phase <phase> <model>`):
    Validate phase name against known phases: `discover`, `define`, `develop`, `deliver`, `quick`, `debate`, `review`, `security`, `research`.
