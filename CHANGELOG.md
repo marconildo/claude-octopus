@@ -1,3 +1,16 @@
+## [9.19.3] - 2026-04-04
+
+### Added
+
+- **First-run auto-setup** — SessionStart hook detects first install and auto-prompts `/octo:setup`. Marker file at `~/.claude-octopus/.setup-complete`.
+- **Interactive `/octo:setup` wizard** — Rewritten with AskUserQuestion for provider install (Codex/Gemini/Copilot/Qwen), OAuth/API-key auth, RTK install + hook config, and work mode selection. Replaces passive instruction dump.
+
+### Changed
+
+- **`sys-configure` skill** — Now redirects to `/octo:setup` instead of duplicating setup logic. "configure", "config", and "setup" all route to the same interactive wizard.
+
+---
+
 ## [9.19.2] - 2026-04-04
 
 ### Changed
