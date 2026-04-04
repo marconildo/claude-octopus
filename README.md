@@ -10,7 +10,7 @@ Every AI model has blind spots. Claude Octopus puts up to eight of them on every
   <a href="https://claude.ai"><img src="https://img.shields.io/badge/Claude-Built_with_AI-c96442?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIwbTAgMS44YTEuMiAxLjIgMCAwIDEgLjg1LjM1bDEuNSA0LjVhLjYuNiAwIDAgMCAuMzUuMzVsNC41IDEuNWExLjIgMS4yIDAgMCAxIDAgMi4yN2wtNC41IDEuNWEuNi42IDAgMCAwLS4zNS4zNWwtMS41IDQuNWExLjIgMS4yIDAgMCAxLTIuMjcgMGwtMS41LTQuNWEuNi42IDAgMCAwLS4zNS0uMzVsLTQuNS0xLjVhMS4yIDEuMiAwIDAgMSAwLTIuMjdsNC41LTEuNWEuNi42IDAgMCAwIC4zNS0uMzVsMS41LTQuNUExLjIgMS4yIDAgMCAxIDEyIDMuOCIvPjwvc3ZnPg==&labelColor=333" alt="Built with Claude"></a>
   <a href="https://github.com/nyldn/claude-octopus/actions/workflows/test.yml"><img src="https://github.com/nyldn/claude-octopus/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
   <img src="https://img.shields.io/badge/Tests-146_passing-brightgreen" alt="146 tests passing">
-  <img src="https://img.shields.io/badge/Version-9.18.0-blue" alt="Version 9.16.0">
+  <img src="https://img.shields.io/badge/Version-9.18.1-blue" alt="Version 9.18.1">
   <img src="https://img.shields.io/badge/Claude_Code-v2.1.83+-blueviolet" alt="Requires Claude Code v2.1.83+">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
 </p>
@@ -23,7 +23,7 @@ Every AI model has blind spots. Claude Octopus puts up to eight of them on every
 
 🔄 **Four-phase methodology, not just tools.** Every task moves through Discover → Define → Develop → Deliver, with quality gates between phases. Other orchestrators give you infrastructure. Octopus gives you the workflows.
 
-🐙 **32 specialized personas** (role-specific AI agents like security-auditor, backend-architect), **48 commands** (slash commands you type), **51 skills** (reusable workflow modules). Say "audit my API" and the right expert activates. Don't know the command? The smart router figures it out.
+🐙 **32 specialized personas** (role-specific AI agents like security-auditor, backend-architect), **49 commands** (slash commands you type), **51 skills** (reusable workflow modules). Say "audit my API" and the right expert activates. Don't know the command? The smart router figures it out.
 
 🐙 **Works with just Claude. Scales to eight.** Zero providers needed to start. Add them one at a time — each activates automatically when detected.
 
@@ -35,7 +35,7 @@ Every AI model has blind spots. Claude Octopus puts up to eight of them on every
 
 | Version | Best Features |
 |---------|--------------|
-| **v9** (current) | Up to 8 providers (Codex, Gemini, Copilot, Qwen, Ollama, Perplexity, OpenRouter, OpenCode). Four-way AI debates. Smart router — just say what you need. Discipline mode with 8 auto-invoke gates. Two-stage review (spec compliance then code quality). Circuit breakers with automatic provider recovery. Cursor + OpenCode + Codex cross-compatibility. Effort-aware skills save tokens automatically. |
+| **v9** (current) | Up to 8 providers (Codex, Gemini, Copilot, Qwen, Ollama, Perplexity, OpenRouter, OpenCode). Four-way AI debates. Smart router — just say what you need. Discipline mode with 8 auto-invoke gates. Two-stage review (spec compliance then code quality). Circuit breakers with automatic provider recovery. Cursor + OpenCode + Codex cross-compatibility. Effort-aware skills save tokens automatically. RTK integration for 60-90% bash output token savings with HUD visibility. |
 | **v8** | Multi-LLM code review with inline PR comments. Parallel workstreams in isolated git worktrees. Reaction engine — auto-responds to CI failures. 32 specialized personas. Dark Factory autonomous pipeline. |
 | **v7** | Double Diamond workflow. Multi-provider dispatch. Quality gates and consensus scoring. Configurable sandbox modes. |
 
@@ -69,6 +69,8 @@ Restart Codex. Skills appear automatically — invoke with `$skill-doctor`, `$sk
 
 Cursor uses Octopus as an **MCP server** (not a plugin — Cursor doesn't have Claude Code's plugin system). You get MCP tools like `octopus_discover`, `octopus_review`, etc. instead of `/octo:*` slash commands.
 
+> **Important:** Just cloning the repo is not enough. You must complete all three steps below — install dependencies and configure the MCP server — for Cursor to pick up Octopus tools.
+
 ```bash
 # 1. Clone the repo
 git clone --depth 1 https://github.com/nyldn/claude-octopus.git ~/.cursor/claude-octopus
@@ -95,6 +97,29 @@ cd ~/.cursor/claude-octopus/mcp-server && npm install
 ```
 
 Restart Cursor. Tools appear in Cursor's AI chat — invoke by asking e.g. "use octopus_discover to research X".
+
+<details>
+<summary>Using Cursor on WSL?</summary>
+
+If you're running Cursor on Windows with WSL, clone the repo inside WSL and point the MCP config through `wsl.exe`:
+
+```json
+{
+  "mcpServers": {
+    "claude-octopus": {
+      "command": "wsl",
+      "args": ["npx", "tsx", "/home/<user>/.cursor/claude-octopus/mcp-server/src/index.ts"],
+      "env": {
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}",
+        "GEMINI_API_KEY": "${env:GEMINI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Replace `<user>` with your WSL username. Make sure `node` and `npm` are installed inside WSL.
+</details>
 
 See [docs/IDE-INTEGRATION.md](docs/IDE-INTEGRATION.md) for the full guide including `ide-attach.sh` auto-setup.
 </details>
@@ -154,7 +179,7 @@ claude plugin install octo@nyldn-plugins
 /octo:prd mobile checkout redesign          # AI-optimized PRD with 100-point scoring
 ```
 
-Plus 30 more: review, debug, extract, deck, docs, schedule, parallel, sentinel, brainstorm, claw, doctor, and [the full set](docs/COMMAND-REFERENCE.md).
+Plus 30+ more: review, debug, extract, deck, docs, schedule, parallel, sentinel, optimize, brainstorm, claw, doctor, and [the full set](docs/COMMAND-REFERENCE.md).
 
 Don't remember the command name? Just describe what you need:
 
@@ -184,6 +209,7 @@ Not sure which command to use? Pick by goal:
 | Write a product spec | `/octo:prd` |
 | Go from spec to shipping code | `/octo:factory` |
 | Debug a tricky issue | `/octo:debug` |
+| Reduce token usage | `/octo:optimize` |
 | Just run something quick | `/octo:quick` |
 
 Or skip the table — type `/octo:auto <what you want>` or just say `octo <what you want>`, and the smart router picks for you. 🔍

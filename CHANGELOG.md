@@ -1,3 +1,18 @@
+## [9.19.0] - 2026-04-03
+
+### Added
+
+- **Token optimization command** (`/octo:optimize`) — Analyzes token usage patterns, detects RTK install/hook status, shows context window usage, and provides guided RTK setup with per-command-type savings benchmarks. 49 commands total.
+- **RTK-aware context nudges** — `context-awareness.sh` now detects RTK and shows gain stats at CRITICAL/AUTO_COMPACT severity. Users without RTK get install tips at WARNING+. Uses `rtk gain --json` with python3 parsing for reliable stat extraction.
+- **HUD RTK column** — `octopus-hud.mjs` gains an "RTK" column showing cumulative tokens saved and average compression percentage. Auto-shows when RTK has gain data. Uses 120s cache with 2s subprocess timeout. Added to `performance` preset.
+- **Doctor RTK diagnostics** — `skill-doctor.md` reports RTK hook configuration status (not just install). `install-deps.sh` detects RTK version and whether the Claude Code bash hook is active, with actionable fix commands.
+
+### Changed
+
+- **Context awareness hook** — RTK tip broadened from WARNING-only to WARNING + CRITICAL + AUTO_COMPACT severity levels.
+
+---
+
 ## [9.18.1] - 2026-04-02
 
 ### Fixed
