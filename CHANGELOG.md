@@ -1,3 +1,27 @@
+## [9.19.0] - 2026-04-03
+
+### Added
+
+- **Token optimization command** (`/octo:optimize`) — Analyzes token usage patterns, detects RTK install/hook status, shows context window usage, and provides guided RTK setup with per-command-type savings benchmarks. 49 commands total.
+- **RTK-aware context nudges** — `context-awareness.sh` now detects RTK and shows gain stats at CRITICAL/AUTO_COMPACT severity. Users without RTK get install tips at WARNING+. Uses `rtk gain --json` with python3 parsing for reliable stat extraction.
+- **HUD RTK column** — `octopus-hud.mjs` gains an "RTK" column showing cumulative tokens saved and average compression percentage. Auto-shows when RTK has gain data. Uses 120s cache with 2s subprocess timeout. Added to `performance` preset.
+- **Doctor RTK diagnostics** — `skill-doctor.md` reports RTK hook configuration status (not just install). `install-deps.sh` detects RTK version and whether the Claude Code bash hook is active, with actionable fix commands.
+
+### Changed
+
+- **Context awareness hook** — RTK tip broadened from WARNING-only to WARNING + CRITICAL + AUTO_COMPACT severity levels.
+
+---
+
+## [9.18.1] - 2026-04-02
+
+### Fixed
+
+- **Embrace workflow silent exit** — `cleanup_old_results()` and `cleanup_cache()` in `semantic-cache.sh` used bare `[[ cond ]] && cmd` patterns that returned exit code 1 under `set -e` when no files needed cleaning. Added `|| true` to prevent premature script termination. (#241)
+- **SESSION_FILE path expansion** — `SESSION_FILE` was derived from `WORKSPACE_DIR` at source-time in `quality.sh`, before `WORKSPACE_DIR` was defined in `orchestrate.sh`, causing it to expand to `/session.json`. Re-derived after `WORKSPACE_DIR` is set. (#241)
+
+---
+
 ## [9.18.0] - 2026-03-31
 
 ### Added
