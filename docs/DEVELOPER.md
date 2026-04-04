@@ -78,18 +78,12 @@ claude --add-dir=config/workflows          # Double Diamond
 
 ## E2E Testing Infrastructure
 
-Automated smoke testing on Oracle Cloud VPS (`ssh amy`), checking every 2 hours.
+Automated smoke testing runs on a remote VPS, checking for new releases every 2 hours.
 
 - **Phase A (Docker):** Install → structure verify → unit tests → uninstall
 - **Phase B (Native):** Live command tests with authed Claude Code, Codex, Gemini
 
-### Maintenance
-
-```bash
-scp docs/e2e/*.sh amy:/home/openclaw/.octopus-e2e/       # Deploy
-ssh amy 'rm -f ~/.octopus-e2e/last-tested-version && ~/.octopus-e2e/e2e-runner.sh'  # Force re-run
-ssh amy 'cat ~/.octopus-e2e/last-tested-version && tail -20 ~/.octopus-e2e/logs/cron.log'  # Status
-```
+E2E test scripts are in the private dev repo (`docs/e2e/`), not in this public plugin.
 
 ### Dynamic Fleet Dispatch
 
