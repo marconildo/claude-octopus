@@ -1,3 +1,9 @@
+## [9.20.2] - 2026-04-09
+
+### Fixed
+
+- **Broken symlinks in vendor skill** — `vendors/ui-ux-pro-max-skill` was a git submodule with 3 internal symlinks (`.shared/ui-ux-pro-max`, `.claude/skills/.../scripts`, `.claude/skills/.../data`). Claude Code's plugin installer doesn't recurse submodules, so these broke on install. Replaced the submodule with plain vendored files, resolving all symlinks to real copies. Fixes E2E B10 failure.
+
 ## [9.20.1] - 2026-04-09
 
 ### Fixed
