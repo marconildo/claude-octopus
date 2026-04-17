@@ -50,6 +50,7 @@ export const SKILL_REGISTRY: SkillRegistryEntry[] = [
   { name: "skill-iterative-loop", description: "Run tasks in a loop until goals are met — use for iterative refinement, polling, or convergence", type: "skill", file: "skill-iterative-loop.md" },
   { name: "skill-knowledge-work", description: "Switch to Knowledge Work mode for research and writing — use when task is non-code focused", type: "skill", file: "skill-knowledge-work.md" },
   { name: "skill-meta-prompt", description: "Craft better prompts using proven optimization techniques — use when your prompt needs refinement", type: "skill", file: "skill-meta-prompt.md" },
+  { name: "skill-native-escalation-routing", description: "Route ordinary init, review, and security requests to Claude-native capabilities first; escalate to Octopus only when multi-LLM diversity adds value", type: "skill", file: "skill-native-escalation-routing.md" },
   { name: "skill-parallel-agents", description: "Decompose large tasks across parallel agents — use for migrations, multi-file refactors, or batch work", type: "skill", file: "skill-parallel-agents.md" },
   { name: "skill-prd", description: "Write an AI-optimized PRD using multi-AI orchestration — use when scoping a new feature or product", type: "skill", file: "skill-prd.md" },
   { name: "skill-resume", description: "Pick up where you left off from a previous session — use after context resets, compaction, or new conversations", type: "skill", file: "skill-resume.md" },
@@ -104,10 +105,10 @@ export const SKILL_REGISTRY: SkillRegistryEntry[] = [
   { name: "research", description: "Deep research with multi-source synthesis and comprehensive analysis", type: "command", file: "research.md" },
   { name: "resume", description: "Resume a previous agent by ID — continue an interrupted task where it left off", type: "command", file: "resume.md" },
   { name: "retro", description: "Generate engineering retrospectives from git history with trends and team analysis", type: "command", file: "retro.md" },
-  { name: "review", description: "Expert multi-LLM code review with inline PR comments — competes with CC Code Review", type: "command", file: "review.md" },
+  { name: "review", description: "Enhanced multi-LLM review with inline PR comments — escalation path beyond Claude-native /review", type: "command", file: "review.md" },
   { name: "scheduler", description: "Manage the scheduled workflow runner daemon (start/stop/status)", type: "command", file: "scheduler.md" },
   { name: "schedule", description: "Manage scheduled workflow jobs (add via wizard, dashboard, list, remove, enable, disable, logs)", type: "command", file: "schedule.md" },
-  { name: "security", description: "Security audit with OWASP compliance and vulnerability detection", type: "command", file: "security.md" },
+  { name: "security", description: "Enhanced multi-LLM or adversarial security audit — escalation path beyond Claude-native /security-review", type: "command", file: "security.md" },
   { name: "sentinel", description: "GitHub-aware work monitor - triages issues, PRs, and CI failures", type: "command", file: "sentinel.md" },
   { name: "setup", description: "Interactive setup wizard — install providers, configure auth, RTK, token optimization", type: "command", file: "setup.md" },
   { name: "spec", description: "NLSpec authoring - Structured specification from multi-AI research", type: "command", file: "spec.md" },
@@ -116,4 +117,4 @@ export const SKILL_REGISTRY: SkillRegistryEntry[] = [
   { name: "unfreeze", description: "Remove freeze mode edit restriction", type: "command", file: "unfreeze.md" },
 ];
 
-export const REGISTRY_COUNT = 99;
+export const REGISTRY_COUNT = 100;

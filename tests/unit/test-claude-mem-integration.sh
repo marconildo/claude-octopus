@@ -90,10 +90,13 @@ fi
 
 # ── 7. Observation wiring in save_session_checkpoint ─────────────────
 
-if grep -c 'bridge_script.*observe\|claude-mem-bridge.*observe' "$ORCH" >/dev/null 2>&1; then
-    pass "Wired: save_session_checkpoint calls bridge observe"
+# v9.22.0 memory refactor: save_session_checkpoint now routes through memory_observe
+# (lib/memory.sh), which delegates to the claude-mem or mcp-memory-service bridge.
+# Accept either the legacy direct-bridge call or the new façade.
+if grep -qE 'bridge_script.*observe|claude-mem-bridge.*observe|memory_observe[[:space:]]|"\$bridge"[[:space:]]+observe' "$ORCH"; then
+    pass "Wired: save_session_checkpoint calls bridge observe (or memory_observe façade)"
 else
-    fail "Wired: save_session_checkpoint calls bridge observe" "no bridge observe call"
+    fail "Wired: save_session_checkpoint calls bridge observe" "no bridge observe or memory_observe call found"
 fi
 
 # ── 8. SessionStart memory hook queries claude-mem ───────────────────
