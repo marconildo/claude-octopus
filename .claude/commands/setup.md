@@ -174,6 +174,26 @@ AskUserQuestion({
 
 If Knowledge Work selected, offer to install document-skills plugin.
 
+## STEP 4b: Prompt Cache Optimization (Claude Code v2.1.108+)
+
+Skip this step when `SUPPORTS_PROMPT_CACHE_1H=false`. Otherwise:
+
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "Enable 1-hour prompt cache TTL? (Saves tokens on long /octo:embrace and /octo:loop sessions — the default is 5 minutes.)",
+    header: "Prompt Cache",
+    multiSelect: false,
+    options: [
+      {label: "Yes, enable 1-hour cache", description: "Adds ENABLE_PROMPT_CACHING_1H=1 to your shell profile — applies to Claude API/Bedrock/Vertex/Foundry."},
+      {label: "No, keep 5-minute default", description: "Simpler mental model; lower cost ceiling if you only run short sessions."}
+    ]
+  }]
+})
+```
+
+If "Yes", append `export ENABLE_PROMPT_CACHING_1H=1` to `~/.bashrc` (or `~/.zshrc` per `$SHELL`), only if not already present. Note to the user: this only affects Claude-to-Claude round-trips inside Claude Code. External CLI subshells (Codex, Gemini, Perplexity) are unaffected — their providers manage caching independently.
+
 ## STEP 5: Verify & Summarize
 
 Re-run provider detection to confirm everything works:

@@ -230,24 +230,37 @@ Always be mindful that external CLIs cost money:
 - 🟡 Gemini: ~$0.01-0.03 per query (Gemini Pro)
 - 🟣 Perplexity: ~$0.01-0.05 per query (Sonar Pro $3/$15 MTok, Sonar $1/$1 MTok)
 - 🔵 Claude (Sonnet 4.6): Included with Claude Code subscription
-- 🔵 Claude (Opus 4.6): $5/$25 per MTok input/output when using `claude-opus` agent type
-- 🔵 Claude (Opus 4.6 Fast): **$30/$150 per MTok** (6x standard) - lower latency, extra-usage billing (v2.1.36+)
+- 🔵 Claude (Opus 4.7, default when `SUPPORTS_OPUS_4_7=true`): $5/$25 per MTok input/output. No fast variant. 1M context native. Use `xhigh` effort for coding/agentic work (plugin default), `high` for knowledge work.
+- 🔵 Claude (Opus 4.6, legacy): $5/$25 per MTok — still selectable via `OCTOPUS_OPUS_MODEL=claude-opus-4.6` or `claude-opus-legacy` agent type
+- 🔵 Claude (Opus 4.6 Fast): **$30/$150 per MTok** (6x standard) — lower latency, extra-usage billing (v2.1.36+). Only available on 4.6; no 4.7 equivalent.
 - 🟤 OpenCode: Variable cost — free for native models, uses backend provider pricing when routing to OpenAI/Google
 
 Note: Some OpenAI models (o-series reasoning, gpt-4.1, gpt-5.4-pro) require API keys and are NOT available via ChatGPT subscription/OAuth auth.
 
 For simple tasks that don't need multi-AI perspectives, suggest using Claude directly without orchestration.
 
-### Fast Opus 4.6 Mode (Claude Code v2.1.36+)
+### Opus 4.7 Effort Levels (Claude Code v2.1.111+)
 
-**WARNING: Fast Opus is 6x more expensive than standard Opus.** It uses extra-usage billing at $30/$150 per MTok (vs $5/$25 standard). It provides lower latency but identical quality.
+Opus 4.7 introduces a new `xhigh` effort level between `high` and `max`. Claude Code's default is `xhigh` on 4.7. The plugin maps phases to effort:
+
+- **probe / discover** — `medium` (breadth > depth for research)
+- **grasp / define** — `medium`
+- **tangle / develop** — `xhigh` for complex work, `medium` for trivial
+- **ink / deliver** — `xhigh` for security/architecture reviews, `medium` otherwise
+
+`xhigh` silently falls back to `high` on Opus 4.6, so the plugin sets `xhigh` unconditionally and lets Claude Code handle the downgrade. Override per-session with `OCTOPUS_EFFORT_OVERRIDE=low|medium|high|xhigh|max`.
+
+### Fast Opus 4.6 Mode (Claude Code v2.1.36+, Opus 4.6 only)
+
+**WARNING: Fast Opus is 6x more expensive than standard Opus.** It uses extra-usage billing at $30/$150 per MTok (vs $5/$25 standard). It provides lower latency but identical quality. **Not available on Opus 4.7** — fast mode is exclusively a 4.6 feature.
 
 When `SUPPORTS_FAST_OPUS=true` is detected, orchestrate.sh routes conservatively:
-- **Default: standard mode** for all multi-phase workflows (embrace, discover, develop, etc.)
-- **Fast mode only** for interactive single-shot Opus queries where the user is actively waiting
+- **Default: Opus 4.7 standard** for all multi-phase workflows (embrace, discover, develop, etc.)
+- **Fast mode (4.6): only** for interactive single-shot Opus queries where the user is actively waiting and latency matters more than the new 4.7 capabilities
 - **Never fast in autonomous/background mode** (no human waiting = no latency benefit)
-- **User override**: Set `OCTOPUS_OPUS_MODE=fast` to force fast everywhere (costly!)
-- **User override**: Set `OCTOPUS_OPUS_MODE=standard` to force standard everywhere (default behavior)
+- **User override**: Set `OCTOPUS_OPUS_MODE=fast` to force Opus 4.6 fast (costly!)
+- **User override**: Set `OCTOPUS_OPUS_MODE=standard` to force standard 4.7 everywhere (default behavior)
+- **User override**: Set `OCTOPUS_OPUS_MODEL=claude-opus-4.6` to pin legacy 4.6 standard across the board
 
 Always warn users about the cost difference before enabling fast mode.
 

@@ -7,9 +7,15 @@ description: Enhanced multi-LLM review with inline PR comments — escalation pa
 
 ## Positioning
 
-Use Claude-native `/review` for ordinary review requests.
+Three review entry points coexist in Claude Code v2.1.111+ — pick the right one per context:
 
-Use `/octo:review` when the user explicitly wants enhanced multi-LLM review, multiple model opinions, provider diversity, or stricter escalation workflows.
+| Command | Scope | Providers | When |
+|---|---|---|---|
+| Claude-native `/review` | Single-turn, current diff | Claude only | Ordinary review, one perspective suffices |
+| `/ultrareview` (CC v2.1.111+) | Cloud, parallel multi-agent | Claude parallelism | Pre-merge PR review without leaving CC |
+| `/octo:review` (this) | Multi-LLM, inline PR comments | Codex + Gemini + Claude | Provider diversity, adversarial cross-check, stricter escalation |
+
+Use `/octo:review` when the user explicitly wants enhanced multi-LLM review, multiple model opinions, provider diversity, or stricter escalation workflows. If CC v2.1.111+ and the user just says "review this", prefer `/ultrareview` unless provider diversity is specifically requested.
 
 When the user invokes this command (e.g., `/octo:review <arguments>`):
 

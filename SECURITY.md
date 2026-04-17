@@ -62,7 +62,8 @@ Claude Octopus orchestrates external AI CLI tools (Codex CLI, Gemini CLI) with u
 
 | Version | Supported |
 |---------|-----------|
-| 9.22.x  | Yes - Full security updates |
+| 9.23.x  | Yes - Full security updates |
+| 9.22.x  | Critical patches only |
 | 9.9-9.21 | Critical patches only |
 | < 9.9   | No |
 

@@ -1,4 +1,46 @@
-## [9.22.2] - 2026-04-17
+## [9.23.0] - 2026-04-17
+
+### Added
+
+- **Claude Opus 4.7 support** — the `claude-opus` agent type now resolves to `claude-opus-4.7` when Claude Code v2.1.111+ is detected, falling back to `claude-opus-4.6` otherwise. Opus 4.7 is same-priced as 4.6 ($5/$25 MTok), takes a step change on SWE-bench Pro/Verified, has 1M native context, and is adaptive-thinking only. `OCTOPUS_OPUS_MODEL` env var overrides the default (e.g. pin to `claude-opus-4.6` for legacy behavior).
+- **`xhigh` effort level** — Opus 4.7's new effort tier between `high` and `max`. Plugin defaults the tangle/develop and ink/deliver phases to `xhigh` on complex work (complexity=3). Automatically falls back to `high` on Opus 4.6. Override with `OCTOPUS_EFFORT_OVERRIDE=low|medium|high|xhigh|max`.
+- **17 new `SUPPORTS_*` feature flags** covering Claude Code v2.1.105–112 (now 154 total):
+  - `SUPPORTS_PRECOMPACT_BLOCKING` (2.1.105) — PreCompact hook can veto compaction
+  - `SUPPORTS_PLUGIN_MONITORS` (2.1.105) — `monitors` manifest key for background processes
+  - `SUPPORTS_ENTER_WORKTREE_PATH` (2.1.105) — `path` param on EnterWorktree
+  - `SUPPORTS_MCP_TRUNCATE_RECIPES` (2.1.105) — format-specific MCP truncation
+  - `SUPPORTS_PROMPT_CACHE_1H` (2.1.108) — `ENABLE_PROMPT_CACHING_1H` env var
+  - `SUPPORTS_SESSION_RECAP` (2.1.108) — `/recap` and auto-context on session return
+  - `SUPPORTS_BUILTIN_SLASH_VIA_SKILL` (2.1.108) — model invokes built-in `/review`, `/security-review`
+  - `SUPPORTS_TASKCREATED_HOOK` (2.1.110) — new `TaskCreated` hook event
+  - `SUPPORTS_PERMISSIONREQ_RECHECK` (2.1.110) — `updatedInput` re-validated vs `permissions.deny`
+  - `SUPPORTS_PRETOOL_CTX_ON_FAIL` (2.1.110) — `additionalContext` survives tool-call failure
+  - `SUPPORTS_TUI_FULLSCREEN` (2.1.110) — `/tui fullscreen` rendering
+  - `SUPPORTS_OTEL_RAW_BODIES` (2.1.110) — `OTEL_LOG_RAW_API_BODIES` env var
+  - `SUPPORTS_POWERSHELL_TOOL` (2.1.110) — Windows PowerShell tool (progressive rollout)
+  - `SUPPORTS_XHIGH_EFFORT` (2.1.111) — Opus 4.7 effort level
+  - `SUPPORTS_OPUS_4_7` (2.1.111) — gates Opus 4.7 resolution
+  - `SUPPORTS_AUTO_MODE_GA` (2.1.111) — `--enable-auto-mode` no longer required
+  - `SUPPORTS_ULTRAREVIEW` (2.1.111) — `/ultrareview` cloud parallel review (complements `/octo:review`)
+
+### Changed
+
+- **`hooks/pre-compact.sh` now blocks compaction during active workflow phases** — on Claude Code v2.1.105+, when 1+ agents are in flight during `tangle`/`develop`/`ink`/`deliver`/`discover-dispatch`, the hook emits `{"decision":"block"}` and the compaction is deferred. Opt out with `OCTOPUS_PRECOMPACT_BLOCK=off`. On older CC versions, hook continues to warn-only as before.
+- **`task-dependency-validator.sh` also fires on `TaskCreated`** — cleaner than the existing `PreToolUse(TaskCreate)` registration because it runs after creation with access to the task ID. The PreToolUse entry is retained as fallback for CC <2.1.110; the validator is idempotent so firing twice is safe.
+- **W3C trace headers propagate into external CLI subshells** — when `TRACEPARENT` and/or `TRACESTATE` are set, `build_provider_env` now forwards them into the `env -i` isolated shell for codex/gemini/perplexity invocations so those CLIs participate in the same distributed trace as the host Claude Code session.
+- **`/octo:review` positioning updated** — the command header now distinguishes it from Claude Code's native `/review` and the new `/ultrareview` (v2.1.111+ cloud parallel review). Plugin's multi-LLM review remains the right tool when provider diversity or adversarial cross-check matters.
+- **`/octo:setup` offers `ENABLE_PROMPT_CACHING_1H` opt-in** when Claude Code v2.1.108+ is detected (Step 4b). Documents that this affects Claude-Claude round-trips only, not external CLI subshells.
+- **`scripts/lib/agents.sh` effort mapping** — tangle/ink phases at complexity=3 now emit `xhigh` (not `high`) when `SUPPORTS_XHIGH_EFFORT=true`. Effort is threaded through the subshell as `CLAUDE_CODE_EFFORT_LEVEL=xhigh` so the user's persistent `/effort` setting is not mutated.
+- **`OCTOPUS_EFFORT_OVERRIDE` accepts `xhigh` and `max`** — previously restricted to `low|medium|high`.
+- **Model catalog refreshed** — `claude-opus-4.7` added (1M context, premium tier, active); `claude-opus-4.6` and `claude-opus-4.6-fast` marked legacy.
+
+### Notes
+
+- **No breaking changes.** Users on Claude Code <2.1.111 transparently continue on Opus 4.6 behavior. Pinning to a specific Opus version via `OCTOPUS_OPUS_MODEL` remains the escape hatch.
+- **Opus 4.7 has no "fast" variant.** `OCTOPUS_OPUS_MODE=fast` explicitly targets `claude-opus-4.6 --fast` — a deliberate choice over silent mapping to something like `--effort low`, because fast mode is a latency feature distinct from effort.
+- **Opus 4.7 API breakages** (no `temperature`/`top_p`/`top_k`, no `thinking_budget`, new tokenizer up to 1.35× token count) are handled by Claude Code itself — the plugin invokes `claude` subshells via `--model opus`, so all API-layer concerns stay inside CC.
+
+## [9.22.1] - 2026-04-16
 
 ### Fixed
 

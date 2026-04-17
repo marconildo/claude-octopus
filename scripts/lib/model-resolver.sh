@@ -6,6 +6,21 @@
 # Extracted from orchestrate.sh — v9.7.5
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# v9.23.0: Opus default picker — prefers 4.7 when host supports it, falls back to 4.6.
+# Respects OCTOPUS_OPUS_MODEL override (user-pinned version).
+opus_default_model() {
+    if [[ -n "${OCTOPUS_OPUS_MODEL:-}" ]]; then
+        echo "$OCTOPUS_OPUS_MODEL"
+        return 0
+    fi
+    # SUPPORTS_OPUS_4_7 is detected from Claude Code v2.1.111+ — see lib/providers.sh
+    if [[ "${SUPPORTS_OPUS_4_7:-false}" == "true" ]]; then
+        echo "claude-opus-4.7"
+    else
+        echo "claude-opus-4.6"
+    fi
+}
+
 # resolve_octopus_model <provider> <agent_type> <phase> <role>
 resolve_octopus_model() {
     local provider="$1"
@@ -166,7 +181,8 @@ resolve_octopus_model() {
             codex*)          resolved_model="gpt-5.4" ;;
             gemini-fast|gemini-flash) resolved_model="gemini-3-flash-preview" ;;
             gemini*)         resolved_model="gemini-3.1-pro-preview" ;;
-            claude-opus*)    resolved_model="claude-opus-4.6" ;;
+            claude-opus-legacy*) resolved_model="claude-opus-4.6" ;;
+            claude-opus*)    resolved_model="$(opus_default_model)" ;;
             claude*)         resolved_model="claude-sonnet-4.6" ;;
             perplexity-fast)  resolved_model="sonar" ;;
             perplexity*)       resolved_model="sonar-pro" ;;

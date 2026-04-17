@@ -55,38 +55,42 @@ get_effort_level() {
             return 0
         fi
         case "$OCTOPUS_EFFORT_OVERRIDE" in
-            low|medium|high) echo "$OCTOPUS_EFFORT_OVERRIDE"; return ;;
-            *) log "WARN" "Invalid OCTOPUS_EFFORT_OVERRIDE='$OCTOPUS_EFFORT_OVERRIDE' — ignoring (use low|medium|high)" ;;
+            low|medium|high|xhigh|max) echo "$OCTOPUS_EFFORT_OVERRIDE"; return ;;
+            *) log "WARN" "Invalid OCTOPUS_EFFORT_OVERRIDE='$OCTOPUS_EFFORT_OVERRIDE' — ignoring (use low|medium|high|xhigh|max)" ;;
         esac
+    fi
+
+    # v9.23: xhigh is Opus 4.7's recommended default for coding/agentic work.
+    # Use it when available and the phase warrants depth. Fall back to high on
+    # Opus 4.6 (where xhigh is silently mapped to high by Claude Code anyway).
+    local _deep="high"
+    if [[ "${SUPPORTS_XHIGH_EFFORT:-false}" == "true" ]]; then
+        _deep="xhigh"
     fi
 
     # Phase-aware mapping
     local effort=""
     case "$phase" in
         probe|discover)
-            # Research: low complexity = medium effort (v8.34: Opus defaults to medium), high = medium (never high — broad not deep)
-            case "$complexity" in
-                1) effort="medium" ;;
-                3) effort="medium" ;;
-                *) effort="medium" ;;
-            esac
+            # Research: broad not deep — stay at medium regardless of complexity
+            effort="medium"
             ;;
         grasp|define)
-            # Scoping: always medium — needs reasoning but not maximum depth
+            # Scoping: needs reasoning but not maximum depth
             effort="medium"
             ;;
         tangle|develop)
-            # Implementation: scale with complexity — this is where depth matters
+            # Implementation: scale with complexity — xhigh on 4.7 is the sweet spot
             case "$complexity" in
                 1) effort="medium" ;;
-                3) effort="high" ;;
+                3) effort="$_deep" ;;
                 *) effort="medium" ;;
             esac
             ;;
         ink|deliver)
-            # Review: medium for standard, high for complex (security, architecture)
+            # Review: xhigh for complex (security, architecture), medium otherwise
             case "$complexity" in
-                3) effort="high" ;;
+                3) effort="$_deep" ;;
                 *) effort="medium" ;;
             esac
             ;;

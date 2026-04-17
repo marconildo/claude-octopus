@@ -855,8 +855,9 @@ get_model_pricing() {
         # Claude models
         claude-sonnet-4.5)      echo "3.00:15.00" ;;
         claude-sonnet-4.6)      echo "3.00:15.00" ;;   # v8.17: Sonnet 4.6 (same pricing as 4.5)
-        claude-opus-4.6)        echo "5.00:25.00" ;;
-        claude-opus-4.6-fast)   echo "30.00:150.00" ;;  # v8.4: Fast mode - 6x cost for lower latency
+        claude-opus-4.7)        echo "5.00:25.00" ;;   # v9.23: Opus 4.7 — same price as 4.6; no fast variant
+        claude-opus-4.6)        echo "5.00:25.00" ;;   # legacy — still available for --fast use case
+        claude-opus-4.6-fast)   echo "30.00:150.00" ;;  # v8.4: Fast mode - 6x cost for lower latency (4.6 only — no 4.7 equivalent)
         # OpenRouter models (v8.11.0)
         z-ai/glm-5)             echo "0.80:2.56" ;;    # GLM-5: code review specialist
         moonshotai/kimi-k2.5)   echo "0.45:2.25" ;;    # Kimi K2.5: research, 262K context

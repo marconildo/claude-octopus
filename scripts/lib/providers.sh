@@ -395,6 +395,39 @@ detect_claude_code_version() {
         SUPPORTS_AUTO_CLOUD_ENV=true
     fi
 
+    # v9.23: Claude Code v2.1.105+ (blockable PreCompact, plugin monitors, worktree path reuse, MCP truncate recipes)
+    if version_compare "$CLAUDE_CODE_VERSION" "2.1.105" ">="; then
+        SUPPORTS_PRECOMPACT_BLOCKING=true
+        SUPPORTS_PLUGIN_MONITORS=true
+        SUPPORTS_ENTER_WORKTREE_PATH=true
+        SUPPORTS_MCP_TRUNCATE_RECIPES=true
+    fi
+
+    # v9.23: Claude Code v2.1.108+ (1-hour prompt cache, session recap, built-in slash via Skill)
+    if version_compare "$CLAUDE_CODE_VERSION" "2.1.108" ">="; then
+        SUPPORTS_PROMPT_CACHE_1H=true
+        SUPPORTS_SESSION_RECAP=true
+        SUPPORTS_BUILTIN_SLASH_VIA_SKILL=true
+    fi
+
+    # v9.23: Claude Code v2.1.110+ (TaskCreated hook, PermissionRequest re-check, PreToolUse ctx on fail, TUI, OTel raw bodies, PowerShell)
+    if version_compare "$CLAUDE_CODE_VERSION" "2.1.110" ">="; then
+        SUPPORTS_TASKCREATED_HOOK=true
+        SUPPORTS_PERMISSIONREQ_RECHECK=true
+        SUPPORTS_PRETOOL_CTX_ON_FAIL=true
+        SUPPORTS_TUI_FULLSCREEN=true
+        SUPPORTS_OTEL_RAW_BODIES=true
+        SUPPORTS_POWERSHELL_TOOL=true
+    fi
+
+    # v9.23: Claude Code v2.1.111+ (Opus 4.7 + xhigh effort, auto mode GA, /ultrareview)
+    if version_compare "$CLAUDE_CODE_VERSION" "2.1.111" ">="; then
+        SUPPORTS_XHIGH_EFFORT=true
+        SUPPORTS_OPUS_4_7=true
+        SUPPORTS_AUTO_MODE_GA=true
+        SUPPORTS_ULTRAREVIEW=true
+    fi
+
     log "INFO" "Claude Code v$CLAUDE_CODE_VERSION detected"
     log "INFO" "Task Management: $SUPPORTS_TASK_MANAGEMENT | Fork Context: $SUPPORTS_FORK_CONTEXT | Agent Teams: $SUPPORTS_AGENT_TEAMS"
     log "INFO" "Persistent Memory: $SUPPORTS_PERSISTENT_MEMORY | Hook Events: $SUPPORTS_HOOK_EVENTS | Agent Type Routing: $SUPPORTS_AGENT_TYPE_ROUTING"

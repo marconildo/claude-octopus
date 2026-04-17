@@ -79,8 +79,18 @@ get_agent_command() {
         codex-review) echo "codex exec review" ;; # Code review mode (no sandbox support)
         claude) echo "claude${_BARE_OPT} --print" ;;                         # Claude Sonnet 4.6
         claude-sonnet) echo "claude${_BARE_OPT} --print --model sonnet" ;;        # Claude Sonnet explicit
-        claude-opus) echo "claude${_BARE_OPT} --print --model opus" ;;            # Claude Opus 4.6 (v8.0)
-        claude-opus-fast) echo "claude${_BARE_OPT} --print --model opus --fast" ;; # Claude Opus 4.6 Fast (v8.4: v2.1.36+)
+        claude-opus)
+            # v9.23: Opus alias — resolves to 4.7 on Anthropic API (v2.1.111+), 4.6 on Bedrock/Vertex.
+            # Prepend CLAUDE_CODE_EFFORT_LEVEL=xhigh when supported so the subshell gets xhigh
+            # without mutating the user's persistent effort setting.
+            if [[ "${SUPPORTS_XHIGH_EFFORT:-false}" == "true" ]]; then
+                echo "CLAUDE_CODE_EFFORT_LEVEL=xhigh claude${_BARE_OPT} --print --model opus"
+            else
+                echo "claude${_BARE_OPT} --print --model opus"
+            fi
+            ;;
+        claude-opus-fast) echo "claude${_BARE_OPT} --print --model claude-opus-4-6 --fast" ;; # Claude Opus 4.6 Fast (v8.4: v2.1.36+) — pinned to 4.6 (no 4.7 fast variant)
+        claude-opus-legacy) echo "claude${_BARE_OPT} --print --model claude-opus-4-6" ;; # v9.23: explicit 4.6 opt-in
         openrouter) echo "openrouter_execute" ;;                 # OpenRouter API (v4.8)
         openrouter-glm5) echo "openrouter_execute_model z-ai/glm-5" ;;           # v8.11.0: GLM-5 via OpenRouter
         openrouter-kimi) echo "openrouter_execute_model moonshotai/kimi-k2.5" ;; # v8.11.0: Kimi K2.5 via OpenRouter

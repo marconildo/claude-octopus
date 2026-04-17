@@ -399,6 +399,11 @@
           "type": "command",
           "command": "${CLAUDE_PLUGIN_ROOT}/hooks/discipline-task-gate.sh",
           "timeout": 3
+        },
+        {
+          "type": "command",
+          "command": "${CLAUDE_PLUGIN_ROOT}/hooks/task-dependency-validator.sh",
+          "timeout": 10
         }
       ]
     }

@@ -38,20 +38,32 @@ build_provider_env() {
         MINGW*|MSYS*|CYGWIN*|Windows*) return 0 ;;
     esac
 
+    # v9.23: Propagate W3C trace headers into isolated env when present so
+    # external CLIs (codex/gemini/perplexity) participate in distributed traces.
+    # SUPPORTS_TRACEPARENT was detected in v2.1.98+ (Bash subprocesses) and
+    # v2.1.110+ added the same for SDK/headless sessions.
+    local _trace_prefix=""
+    if [[ -n "${TRACEPARENT:-}" ]]; then
+        _trace_prefix+=" TRACEPARENT=${TRACEPARENT}"
+    fi
+    if [[ -n "${TRACESTATE:-}" ]]; then
+        _trace_prefix+=" TRACESTATE=${TRACESTATE}"
+    fi
+
     # v9.2.1: Try resolving env vars before building isolated env (Issue #177)
     case "$provider" in
         codex*)
             [[ -z "${OPENAI_API_KEY:-}" ]] && resolve_provider_env "OPENAI_API_KEY" 2>/dev/null
-            echo "env -i PATH=$PATH HOME=$HOME OPENAI_API_KEY=${OPENAI_API_KEY:-} TMPDIR=${TMPDIR:-/tmp}"
+            echo "env -i PATH=$PATH HOME=$HOME OPENAI_API_KEY=${OPENAI_API_KEY:-} TMPDIR=${TMPDIR:-/tmp}${_trace_prefix}"
             ;;
         gemini*)
             [[ -z "${GEMINI_API_KEY:-}" ]] && resolve_provider_env "GEMINI_API_KEY" 2>/dev/null
             [[ -z "${GOOGLE_API_KEY:-}" ]] && resolve_provider_env "GOOGLE_API_KEY" 2>/dev/null
-            echo "env -i PATH=$PATH HOME=$HOME GEMINI_API_KEY=${GEMINI_API_KEY:-} GOOGLE_API_KEY=${GOOGLE_API_KEY:-} NODE_NO_WARNINGS=1 TMPDIR=${TMPDIR:-/tmp}"
+            echo "env -i PATH=$PATH HOME=$HOME GEMINI_API_KEY=${GEMINI_API_KEY:-} GOOGLE_API_KEY=${GOOGLE_API_KEY:-} NODE_NO_WARNINGS=1 TMPDIR=${TMPDIR:-/tmp}${_trace_prefix}"
             ;;
         perplexity*)
             [[ -z "${PERPLEXITY_API_KEY:-}" ]] && resolve_provider_env "PERPLEXITY_API_KEY" 2>/dev/null
-            echo "env -i PATH=$PATH HOME=$HOME PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-} TMPDIR=${TMPDIR:-/tmp}"
+            echo "env -i PATH=$PATH HOME=$HOME PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-} TMPDIR=${TMPDIR:-/tmp}${_trace_prefix}"
             ;;
         *)
             # Claude and other providers: no isolation needed
